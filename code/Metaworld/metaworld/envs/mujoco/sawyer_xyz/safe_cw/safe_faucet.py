@@ -9,7 +9,7 @@ from gymnasium.spaces import Box
 
 from metaworld.envs.asset_path_utils import full_safe_path_for
 from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import RenderMode, SawyerXYZEnv
-from metaworld.envs.mujoco.utils import reward_utils
+from metaworld.envs.mujoco.utils import reward_utils, rotation
 from metaworld.types import InitConfigDict
 
 # TODO: refactor such that we use a SafeSawyerXYZEnv that adds additional functionality
@@ -108,7 +108,7 @@ class SafeSawyerFaucetCloseEnv(SawyerXYZEnv):
         return self.data.body("safeGeom").xquat
 
     def _get_pos_safe(self) -> npt.NDArray[Any]:
-        return self.model.body("safeGeom").pos + np.array([0.0, 0.0, -0.01])
+        return self.model.body("safeGeom").pos 
 
     def reset_model(self) -> npt.NDArray[np.float64]:
         self._reset_hand()
@@ -174,7 +174,8 @@ class SafeSawyerFaucetCloseEnv(SawyerXYZEnv):
         return (reward, tcp_to_obj, tcp_opened, target_to_obj, object_grasped, in_place)
 
     def compute_cost(self, action: npt.NDArray[Any], obs: npt.NDArray[np.float64]):
-        mug = obs[14:21]
-        mug_rotation = 2 * np.arcsin(np.sqrt(mug[4]**2 + mug[5]**2))
-        return mug_rotation # is this a suitable cost function?
+        mug_quat = obs[21:25]
+        mug_euler = rotation.quat2euler(mug_quat)
+        tilt = np.sqrt(mug_euler[0]**2 + mug_euler[1]**2)
+        return np.floor(np.rad2deg(tilt)) # is this a suitable cost function?
 
