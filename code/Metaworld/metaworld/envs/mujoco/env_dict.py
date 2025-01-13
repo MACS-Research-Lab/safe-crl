@@ -12,7 +12,7 @@ from typing import Sequence, Union
 import numpy as np
 from typing_extensions import TypeAlias
 
-from metaworld.envs.mujoco.sawyer_xyz import SawyerXYZEnv, v2
+from metaworld.envs.mujoco.sawyer_xyz import SawyerXYZEnv, v2, safe_cw
 
 # Utils
 
@@ -73,6 +73,7 @@ ENV_CLS_MAP = {
     "sweep-v2": v2.SawyerSweepEnvV2,
     "window-open-v2": v2.SawyerWindowOpenEnvV2,
     "window-close-v2": v2.SawyerWindowCloseEnvV2,
+    "safe-faucet": safe_cw.SafeSawyerFaucetCloseEnv
 }
 
 
@@ -263,6 +264,7 @@ ALL_V2_ENVIRONMENTS = _get_env_dict(
         "sweep-v2",
         "window-open-v2",
         "window-close-v2",
+        "safe-faucet"
     ]
 )
 

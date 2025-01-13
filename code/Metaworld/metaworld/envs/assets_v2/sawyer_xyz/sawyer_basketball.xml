@@ -22,7 +22,7 @@
 
       </body>
 
-      <body name="obstacle" pos="0 0.6 0.04">
+      <body name="obstacle" pos="0.1 0.65 0.2">
         <freejoint/>
         <include file="../objects/assets/mug.xml"/>
       </body>

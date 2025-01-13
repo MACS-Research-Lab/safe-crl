@@ -179,6 +179,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         render_mode: RenderMode | None = None,
         camera_id: int | None = None,
         camera_name: str | None = None,
+        safety_constrained: bool = False
     ) -> None:
         self.action_scale = action_scale
         self.action_rot_scale = action_rot_scale
@@ -197,6 +198,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         self.num_resets: int = 0
         self.current_seed: int | None = None
         self.obj_init_pos: npt.NDArray[Any] | None = None
+        self.safety_constrained = safety_constrained
 
         # TODO Probably needs to be removed
         self.discrete_goal_space: Box | None = None
@@ -226,7 +228,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
             np.array([+1, +1, +1, +1]),
             dtype=np.float32,
         )
-        self._obs_obj_max_len: int = 14
+        self._obs_obj_max_len: int = 14 if self.safety_constrained else 21
         self._set_task_called: bool = False
         self.hand_init_pos: npt.NDArray[Any] | None = None  # OVERRIDE ME
         self._target_pos: npt.NDArray[Any] | None = None  # OVERRIDE ME
@@ -420,6 +422,9 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
     def _get_id_main_object(self) -> int:
         return self.data.geom("objGeom").id
 
+    def _get_id_safety_object(self) -> int:
+        return self.data.geom("safeGeom").id
+
     def _get_pos_objects(self) -> npt.NDArray[Any]:
         """Retrieves object position(s) from mujoco properties or instance vars.
 
@@ -430,6 +435,9 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         # V1 environments don't have to implement it
         raise NotImplementedError
 
+    def _get_pos_safe(self) -> npt.NDArray[Any]:
+        raise NotImplementedError
+
     def _get_quat_objects(self) -> npt.NDArray[Any]:
         """Retrieves object quaternion(s) from mujoco properties.
 
@@ -438,6 +446,9 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         """
         # Throw error rather than making this an @abc.abstractmethod so that
         # V1 environments don't have to implement it
+        raise NotImplementedError
+
+    def _get_quat_safe(self) -> npt.NDArray[Any]:
         raise NotImplementedError
 
     def _get_pos_goal(self) -> npt.NDArray[Any]:
@@ -486,7 +497,16 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         obs_obj_padded[: len(obj_pos) + len(obj_quat)] = np.hstack(
             [np.hstack((pos, quat)) for pos, quat in zip(obj_pos_split, obj_quat_split)]
         )
-        return np.hstack((pos_hand, gripper_distance_apart, obs_obj_padded))
+
+        if not self.safety_constrained:
+            return np.hstack((pos_hand, gripper_distance_apart, obs_obj_padded))
+        else:
+            safe_pos = self._get_pos_safe()
+            assert len(safe_pos) == 3
+            safe_quat = self._get_quat_safe()
+            assert len(safe_quat) == 4
+            safety_object_obs = np.hstack((safe_pos, safe_quat))
+            return np.hstack((pos_hand, gripper_distance_apart, obs_obj_padded, safety_object_obs))
 
     def _get_obs(self) -> npt.NDArray[np.float64]:
         """Frame stacks `_get_curr_obs_combined_no_goal()` and concatenates the goal position to form a single flat observation.
@@ -514,7 +534,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
 
     @property
     def sawyer_observation_space(self) -> Box:
-        obs_obj_max_len = 14
+        obs_obj_max_len = 14 if not self.safety_constrained else 21
         obj_low = np.full(obs_obj_max_len, -np.inf, dtype=np.float64)
         obj_high = np.full(obs_obj_max_len, +np.inf, dtype=np.float64)
         if self._partially_observable:
@@ -654,8 +674,12 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         self.curr_path_length = 0
         self.reset_model()
         obs, info = super().reset()
-        self._prev_obs = obs[:18].copy()
-        obs[18:36] = self._prev_obs
+        if self.safety_constrained:
+            self._prev_obs = obs[:25].copy()
+            obs[25:50] = self._prev_obs
+        else:
+            self._prev_obs = obs[:18].copy()
+            obs[18:36] = self._prev_obs
         obs = obs.astype(np.float64)
         return obs, info
 

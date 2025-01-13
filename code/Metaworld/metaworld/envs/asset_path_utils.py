@@ -8,6 +8,7 @@ _CURRENT_FILE_DIR = Path(__file__).parent.absolute()
 
 ENV_ASSET_DIR_V1 = _CURRENT_FILE_DIR / "assets_v1"
 ENV_ASSET_DIR_V2 = _CURRENT_FILE_DIR / "assets_v2"
+ENV_ASSET_DIR_SAFE = _CURRENT_FILE_DIR / "assets_v2/sawyer_xyz"
 
 
 def full_v1_path_for(file_name: str) -> str:
@@ -32,3 +33,6 @@ def full_v2_path_for(file_name: str) -> str:
         The full path to the asset file.
     """
     return str(ENV_ASSET_DIR_V2 / file_name)
+
+def full_safe_path_for(file_name: str) -> str:
+    return str(ENV_ASSET_DIR_SAFE / file_name)
