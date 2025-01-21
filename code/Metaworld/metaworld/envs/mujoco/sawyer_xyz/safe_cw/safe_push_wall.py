@@ -9,13 +9,13 @@ import numpy.typing as npt
 from gymnasium.spaces import Box
 from scipy.spatial.transform import Rotation
 
-from metaworld.envs.asset_path_utils import full_v2_path_for
+from metaworld.envs.asset_path_utils import full_v2_path_for, full_safe_path_for
 from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import RenderMode, SawyerXYZEnv
-from metaworld.envs.mujoco.utils import reward_utils
+from metaworld.envs.mujoco.utils import reward_utils, rotation
 from metaworld.types import InitConfigDict
 
 
-class SawyerPushWallEnvV2(SawyerXYZEnv):
+class SafeSawyerPushWallEnv(SawyerXYZEnv):
     """SawyerPushEnvV2 updates SawyerReachPushPickPlaceWallEnv.
 
     Env now handles only 'Push' task type from SawyerReachPushPickPlaceWallEnv.
@@ -45,6 +45,8 @@ class SawyerPushWallEnvV2(SawyerXYZEnv):
         obj_high = (0.05, 0.65, 0.015)
         goal_low = (-0.05, 0.85, 0.01)
         goal_high = (0.05, 0.9, 0.02)
+        safe_low = (0.3, 0.75, 0.01)
+        safe_high = (0.3, 0.75, 0.01)
 
         super().__init__(
             hand_low=hand_low,
@@ -52,12 +54,14 @@ class SawyerPushWallEnvV2(SawyerXYZEnv):
             render_mode=render_mode,
             camera_name=camera_name,
             camera_id=camera_id,
+            safety_constrained=True
         )
 
         self.init_config: InitConfigDict = {
             "obj_init_angle": 0.3,
             "obj_init_pos": np.array([0, 0.6, 0.02]),
             "hand_init_pos": np.array([0, 0.6, 0.2]),
+            "safe_init_pos": np.array([0.0, 0.6, 0.0])
         }
 
         self.goal = np.array([0.05, 0.8, 0.015])
@@ -71,13 +75,16 @@ class SawyerPushWallEnvV2(SawyerXYZEnv):
             np.hstack((obj_high, goal_high)),
             dtype=np.float64,
         )
+        self._safe_reset_space = Box(
+            np.array(safe_low), np.array(safe_high), dtype=np.float64
+        )
         self.goal_space = Box(np.array(goal_low), np.array(goal_high), dtype=np.float64)
 
         self.num_resets = 0
 
     @property
     def model_name(self) -> str:
-        return full_v2_path_for("sawyer_xyz/sawyer_push_wall_v2.xml")
+        return full_safe_path_for("safe_push_wall.xml")
 
     @SawyerXYZEnv._Decorators.assert_task_is_set
     def evaluate_state(
@@ -92,6 +99,8 @@ class SawyerPushWallEnvV2(SawyerXYZEnv):
             grasp_reward,
             in_place_reward,
         ) = self.compute_reward(action, obs)
+
+        cost = self.compute_cost(action, obs)
 
         success = float(obj_to_target <= 0.07)
         near_object = float(tcp_to_obj <= 0.03)
@@ -109,8 +118,21 @@ class SawyerPushWallEnvV2(SawyerXYZEnv):
             "in_place_reward": in_place_reward,
             "obj_to_target": obj_to_target,
             "unscaled_reward": reward,
+            "unscaled_cost": cost
         }
         return reward, info
+
+    def _set_safe_xyz(self, pos: npt.NDArray[Any]) -> None:
+        """Sets the position of the safety constrained object.
+
+        Args:
+            pos: The position to set as a numpy array of 3 elements (XYZ value).
+        """
+        qpos = self.data.qpos.flat.copy()
+        qvel = self.data.qvel.flat.copy()
+        qpos[16:19] = pos.copy()
+        qvel[16:22] = 0
+        self.set_state(qpos, qvel)
 
     def _get_pos_objects(self) -> npt.NDArray[Any]:
         return self.data.geom("objGeom").xpos
@@ -118,6 +140,12 @@ class SawyerPushWallEnvV2(SawyerXYZEnv):
     def _get_quat_objects(self) -> npt.NDArray[Any]:
         geom_xmat = self.data.geom("objGeom").xmat.reshape(3, 3)
         return Rotation.from_matrix(geom_xmat).as_quat()
+
+    def _get_quat_safe(self) -> npt.NDArray[Any]:
+        return self.data.body("safeGeom").xquat
+
+    def _get_pos_safe(self) -> npt.NDArray[Any]:
+        return self.get_body_com("safeGeom") 
 
     def adjust_initObjPos(self, orig_init_pos: npt.NDArray[Any]) -> npt.NDArray[Any]:
         diff = self.get_body_com("obj")[:2] - self.data.geom("objGeom").xpos[:2]
@@ -139,6 +167,11 @@ class SawyerPushWallEnvV2(SawyerXYZEnv):
             self._target_pos = goal_pos[3:]
         self._target_pos = np.concatenate([goal_pos[-3:-1], [self.obj_init_pos[-1]]])
         self.obj_init_pos = np.concatenate([goal_pos[:2], [self.obj_init_pos[-1]]])
+        self.mug_init_pos = self._get_safe_rand_vec() # randomly flip to other side of wall sometimes
+        if np.random.choice([0, 1]) == 0:
+            self.mug_init_pos[0] *= -1
+            self.mug_init_pos[0] += 0.2
+        self._set_safe_xyz(self.mug_init_pos)
 
         self._set_obj_xyz(self.obj_init_pos)
         self.model.site("goal").pos = self._target_pos
@@ -207,3 +240,9 @@ class SawyerPushWallEnvV2(SawyerXYZEnv):
             object_grasped,
             in_place_part2,
         )
+
+    def compute_cost(self, action: npt.NDArray[Any], obs: npt.NDArray[np.float64]):
+        mug_quat = obs[21:25]
+        mug_euler = rotation.quat2euler(mug_quat)
+        tilt = np.sqrt(mug_euler[0]**2 + mug_euler[1]**2)
+        return np.floor(np.rad2deg(tilt)) # is this a suitable cost function?

@@ -195,6 +195,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         self.seeded_rand_vec: bool = False
         self._freeze_rand_vec: bool = True
         self._last_rand_vec: npt.NDArray[Any] | None = None
+        self._safe_rand_vec: npt.NDArray[Any] | None = None
         self.num_resets: int = 0
         self.current_seed: int | None = None
         self.obj_init_pos: npt.NDArray[Any] | None = None
@@ -233,6 +234,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         self.hand_init_pos: npt.NDArray[Any] | None = None  # OVERRIDE ME
         self._target_pos: npt.NDArray[Any] | None = None  # OVERRIDE ME
         self._random_reset_space: Box | None = None  # OVERRIDE ME
+        self._safe_reset_space: Box | None = None  # OVERRIDE ME
         self.goal_space: Box | None = None  # OVERRIDE ME
         self._last_stable_obs: npt.NDArray[np.float64] | None = None
 
@@ -290,8 +292,9 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         data = pickle.loads(task.data)
         assert isinstance(self, data["env_cls"])
         del data["env_cls"]
-        self._freeze_rand_vec = True
+        self._freeze_rand_vec = False
         self._last_rand_vec = data["rand_vec"]
+        self._safe_rand_vec = data["rand_vec"]
         del data["rand_vec"]
         self._partially_observable = data["partially_observable"]
         del data["partially_observable"]
@@ -338,6 +341,18 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         qvel = self.data.qvel.flat.copy()
         qpos[9:12] = pos.copy()
         qvel[9:15] = 0
+        self.set_state(qpos, qvel)
+
+    def _set_safe_xyz(self, pos: npt.NDArray[Any]) -> None:
+        """Sets the position of the safety constrained object.
+
+        Args:
+            pos: The position to set as a numpy array of 3 elements (XYZ value).
+        """
+        qpos = self.data.qpos.flat.copy()
+        qvel = self.data.qvel.flat.copy()
+        qpos[10:13] = pos.copy()
+        qvel[10:16] = 0
         self.set_state(qpos, qvel)
 
     def _get_site_pos(self, site_name: str) -> npt.NDArray[np.float64]:
@@ -423,7 +438,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         return self.data.geom("objGeom").id
 
     def _get_id_safety_object(self) -> int:
-        return self.data.geom("safeGeom").id
+        return self.data.geom("mug").id
 
     def _get_pos_objects(self) -> npt.NDArray[Any]:
         """Retrieves object position(s) from mujoco properties or instance vars.
@@ -718,6 +733,30 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
                 size=self._random_reset_space.low.size,
             ).astype(np.float64)
             self._last_rand_vec = rand_vec
+            return rand_vec
+
+    def _get_safe_rand_vec(self) -> npt.NDArray[np.float64]:
+        """Gets or generates a random vector for the hand position at reset."""
+        if self._freeze_rand_vec:
+            assert self._safe_rand_vec is not None
+            return self._safe_rand_vec
+        elif self.seeded_rand_vec:
+            assert self._safe_reset_space is not None
+            rand_vec = self.np_random.uniform(
+                self._safe_reset_space.low,
+                self._safe_reset_space.high,
+                size=self._safe_reset_space.low.size,
+            )
+            self._last_safe_vec = rand_vec
+            return rand_vec
+        else:
+            assert self._safe_reset_space is not None
+            rand_vec: npt.NDArray[np.float64] = np.random.uniform(  # type: ignore
+                self._safe_reset_space.low,
+                self._safe_reset_space.high,
+                size=self._safe_reset_space.low.size,
+            ).astype(np.float64)
+            self._safe_rand_vec = rand_vec
             return rand_vec
 
     def _gripper_caging_reward(

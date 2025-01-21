@@ -73,7 +73,11 @@ ENV_CLS_MAP = {
     "sweep-v2": v2.SawyerSweepEnvV2,
     "window-open-v2": v2.SawyerWindowOpenEnvV2,
     "window-close-v2": v2.SawyerWindowCloseEnvV2,
-    "safe-faucet": safe_cw.SafeSawyerFaucetCloseEnv
+    "safe-faucet": safe_cw.SafeSawyerFaucetCloseEnv,
+    "safe-hammer": safe_cw.SafeSawyerHammerEnv,
+    "safe-push-back": safe_cw.SafeSawyerPushBackEnv,
+    "safe-push-wall": safe_cw.SafeSawyerPushWallEnv,
+    "safe-push": safe_cw.SafeSawyerPushEnv
 }
 
 
@@ -264,7 +268,11 @@ ALL_V2_ENVIRONMENTS = _get_env_dict(
         "sweep-v2",
         "window-open-v2",
         "window-close-v2",
-        "safe-faucet"
+        "safe-faucet",
+        "safe-hammer",
+        "safe-push-back",
+        "safe-push-wall",
+        "safe-push"
     ]
 )
 

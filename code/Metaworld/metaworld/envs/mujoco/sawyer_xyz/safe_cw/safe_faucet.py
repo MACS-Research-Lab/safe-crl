@@ -12,7 +12,6 @@ from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import RenderMode, SawyerXY
 from metaworld.envs.mujoco.utils import reward_utils, rotation
 from metaworld.types import InitConfigDict
 
-# TODO: refactor such that we use a SafeSawyerXYZEnv that adds additional functionality
 class SafeSawyerFaucetCloseEnv(SawyerXYZEnv):
     def __init__(
         self,
@@ -26,9 +25,9 @@ class SafeSawyerFaucetCloseEnv(SawyerXYZEnv):
         obj_high = (0.1, 0.85, 0.0)
 
         # Use this to configure the bounds of the mug
-        safe_low = (-0.25, 0.8, 0.0)
-        safe_high = (-0.25, 0.8, 0.0)
-        # safe_high = (0.1, 0.85, 0.0)
+        safe_low = (-0.15, 0.6, 0.01)
+        safe_high = (0.15, 0.65, 0.01)
+
         self._handle_length = 0.175
         self._target_radius: float = 0.07
 
@@ -44,15 +43,20 @@ class SafeSawyerFaucetCloseEnv(SawyerXYZEnv):
         self.init_config: InitConfigDict = {
             "obj_init_pos": np.array([0, 0.8, 0.0]),
             "hand_init_pos": np.array([0.0, 0.4, 0.2]),
+            "safe_init_pos": np.array([0.0, 0.6, 0.0])
         }
         self.hand_init_pos = self.init_config["hand_init_pos"]
         self.obj_init_pos = self.init_config["obj_init_pos"]
+        self.safe_init_pos = self.init_config["safe_init_pos"]
 
         goal_low = self.hand_low
         goal_high = self.hand_high
 
         self._random_reset_space = Box(
             np.array(obj_low), np.array(obj_high), dtype=np.float64
+        )
+        self._safe_reset_space = Box(
+            np.array(safe_low), np.array(safe_high), dtype=np.float64
         )
         self.goal_space = Box(np.array(goal_low), np.array(goal_high), dtype=np.float64)
 
@@ -108,7 +112,7 @@ class SafeSawyerFaucetCloseEnv(SawyerXYZEnv):
         return self.data.body("safeGeom").xquat
 
     def _get_pos_safe(self) -> npt.NDArray[Any]:
-        return self.model.body("safeGeom").pos 
+        return self.get_body_com("safeGeom") 
 
     def reset_model(self) -> npt.NDArray[np.float64]:
         self._reset_hand()
@@ -118,8 +122,10 @@ class SafeSawyerFaucetCloseEnv(SawyerXYZEnv):
         # Set mujoco body to computed position
         self.model.body("faucetBase").pos = self.obj_init_pos
 
-        self.mug_init_pos = self._get_state_rand_vec()
-        self.model.body("safeGeom").pos = self.obj_init_pos
+        self.mug_init_pos = self._get_safe_rand_vec()
+        self._set_safe_xyz(self.mug_init_pos)
+        # self.model.body("safeGeom").qpos = self.mug_init_pos
+        # self.model.body("safeGeom").pos = np.array([-1, -1, 0])
 
         self._target_pos = self.obj_init_pos + np.array(
             [-self._handle_length, 0.0, 0.125]
