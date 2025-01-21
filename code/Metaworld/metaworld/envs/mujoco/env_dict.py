@@ -77,7 +77,7 @@ ENV_CLS_MAP = {
     "safe-hammer": safe_cw.SafeSawyerHammerEnv,
     "safe-push-back": safe_cw.SafeSawyerPushBackEnv,
     "safe-push-wall": safe_cw.SafeSawyerPushWallEnv,
-    "safe-push": safe_cw.SafeSawyerPushEnv
+    "safe-stick-pull": safe_cw.SafeStickPullEnv
 }
 
 
@@ -272,7 +272,7 @@ ALL_V2_ENVIRONMENTS = _get_env_dict(
         "safe-hammer",
         "safe-push-back",
         "safe-push-wall",
-        "safe-push"
+        "safe-stick-pull"
     ]
 )
 
