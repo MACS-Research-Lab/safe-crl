@@ -71,7 +71,7 @@ class SafetyAsyncVectorEnv(AsyncVectorEnv):
             copy,
             context,
             daemon,
-            worker=target,
+            # worker=target,
         )
 
     def get_images(self):

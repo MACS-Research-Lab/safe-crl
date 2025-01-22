@@ -15,7 +15,7 @@
 """Wrapper for limiting the time steps of an environment."""
 
 
-from gymnasium.wrappers.time_limit import TimeLimit
+from gym.wrappers.time_limit import TimeLimit
 
 
 class SafeTimeLimit(TimeLimit):

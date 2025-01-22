@@ -24,7 +24,7 @@ import torch
 import numpy as np
 from gymnasium.vector.vector_env import VectorEnv
 from gymnasium.spaces import Box
-from gymnasium.wrappers.normalize import NormalizeObservation
+from gym.wrappers.normalize import NormalizeObservation
 
 import safety_gymnasium
 from safety_gymnasium.vector.utils.tile_images import tile_images

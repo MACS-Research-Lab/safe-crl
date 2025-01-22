@@ -22,12 +22,12 @@ class SafeStickPullEnv(SawyerXYZEnv):
     ) -> None:
         hand_low = (-0.5, 0.35, 0.05)
         hand_high = (0.5, 1, 0.5)
-        obj_low = (-0.1, 0.55, 0.000)
-        obj_high = (0.0, 0.65, 0.001)
+        obj_low = (-0.2, 0.55, 0.000)
+        obj_high = (-0.1, 0.65, 0.001)
         goal_low = (0.35, 0.45, 0.0199)
         goal_high = (0.45, 0.55, 0.0201)
-        safe_low = (0.1, 0.55, 0.01)
-        safe_high = (0.2, 0.55, 0.01)
+        safe_low = (0, 0.6, 0.01)
+        safe_high = (0.1, 0.6, 0.01)
 
         super().__init__(
             hand_low=hand_low,

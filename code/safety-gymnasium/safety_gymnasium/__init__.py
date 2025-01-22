@@ -222,6 +222,13 @@ __combine(fading_tasks, robots, max_episode_steps=1000)
 # ----------------------------------------
 
 __register_helper(
+    env_id='SafetyContinualWorld',
+    entry_point='safety_gymnasium.tasks.safe_continual_world.safety_continual_world:SafetyContinualWorldEnv',
+    max_episode_steps=500,
+    reward_threshold=4800.0, # not sure what this should be
+)
+
+__register_helper(
     env_id='SafetyHalfCheetahVelocity-v0',
     entry_point='safety_gymnasium.tasks.safe_velocity.safety_half_cheetah_velocity_v0:SafetyHalfCheetahVelocityEnv',
     max_episode_steps=1000,
