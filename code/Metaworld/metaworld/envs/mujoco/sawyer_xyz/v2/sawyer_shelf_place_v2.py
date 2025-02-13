@@ -1,26 +1,18 @@
-from __future__ import annotations
-
-from typing import Any
-
 import mujoco
 import numpy as np
-import numpy.typing as npt
 from gymnasium.spaces import Box
 from scipy.spatial.transform import Rotation
 
+from metaworld.envs import reward_utils
 from metaworld.envs.asset_path_utils import full_v2_path_for
-from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import RenderMode, SawyerXYZEnv
-from metaworld.envs.mujoco.utils import reward_utils
-from metaworld.types import InitConfigDict
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import (
+    SawyerXYZEnv,
+    _assert_task_is_set,
+)
 
 
 class SawyerShelfPlaceEnvV2(SawyerXYZEnv):
-    def __init__(
-        self,
-        render_mode: RenderMode | None = None,
-        camera_name: str | None = None,
-        camera_id: int | None = None,
-    ) -> None:
+    def __init__(self, tasks=None, render_mode=None):
         goal_low = (-0.1, 0.8, 0.299)
         goal_high = (0.1, 0.9, 0.301)
         hand_low = (-0.5, 0.40, 0.05)
@@ -29,14 +21,16 @@ class SawyerShelfPlaceEnvV2(SawyerXYZEnv):
         obj_high = (0.1, 0.6, 0.021)
 
         super().__init__(
+            self.model_name,
             hand_low=hand_low,
             hand_high=hand_high,
             render_mode=render_mode,
-            camera_name=camera_name,
-            camera_id=camera_id,
         )
 
-        self.init_config: InitConfigDict = {
+        if tasks is not None:
+            self.tasks = tasks
+
+        self.init_config = {
             "obj_init_pos": np.array([0, 0.6, 0.02]),
             "obj_init_angle": 0.3,
             "hand_init_pos": np.array([0, 0.6, 0.2], dtype=np.float32),
@@ -51,18 +45,15 @@ class SawyerShelfPlaceEnvV2(SawyerXYZEnv):
         self._random_reset_space = Box(
             np.hstack((obj_low, goal_low)),
             np.hstack((obj_high, goal_high)),
-            dtype=np.float64,
         )
-        self.goal_space = Box(np.array(goal_low), np.array(goal_high), dtype=np.float64)
+        self.goal_space = Box(np.array(goal_low), np.array(goal_high))
 
     @property
-    def model_name(self) -> str:
+    def model_name(self):
         return full_v2_path_for("sawyer_xyz/sawyer_shelf_placing.xml")
 
-    @SawyerXYZEnv._Decorators.assert_task_is_set
-    def evaluate_state(
-        self, obs: npt.NDArray[np.float64], action: npt.NDArray[np.float32]
-    ) -> tuple[float, dict[str, Any]]:
+    @_assert_task_is_set
+    def evaluate_state(self, obs, action):
         obj = obs[4:7]
         (
             reward,
@@ -74,9 +65,8 @@ class SawyerShelfPlaceEnvV2(SawyerXYZEnv):
         ) = self.compute_reward(action, obs)
         success = float(obj_to_target <= 0.07)
         near_object = float(tcp_to_obj <= 0.03)
-        assert self.obj_init_pos is not None
         grasp_success = float(
-            self.touching_main_object
+            self.touching_object
             and (tcp_open > 0)
             and (obj[2] - 0.02 > self.obj_init_pos[2])
         )
@@ -93,23 +83,23 @@ class SawyerShelfPlaceEnvV2(SawyerXYZEnv):
 
         return reward, info
 
-    def _get_pos_objects(self) -> npt.NDArray[Any]:
+    def _get_pos_objects(self):
         return self.get_body_com("obj")
 
-    def _get_quat_objects(self) -> npt.NDArray[Any]:
+    def _get_quat_objects(self):
         geom_xmat = self.data.geom("objGeom").xmat.reshape(3, 3)
         return Rotation.from_matrix(geom_xmat).as_quat()
 
-    def adjust_initObjPos(self, orig_init_pos: npt.NDArray[Any]) -> npt.NDArray[Any]:
+    def adjust_initObjPos(self, orig_init_pos):
         # This is to account for meshes for the geom and object are not aligned
         # If this is not done, the object could be initialized in an extreme position
         diff = self.get_body_com("obj")[:2] - self.data.geom("objGeom").xpos[:2]
         adjustedPos = orig_init_pos[:2] + diff
 
         # The convention we follow is that body_com[2] is always 0, and geom_pos[2] is the object height
-        return np.array([adjustedPos[0], adjustedPos[1], self.get_body_com("obj")[-1]])
+        return [adjustedPos[0], adjustedPos[1], self.get_body_com("obj")[-1]]
 
-    def reset_model(self) -> npt.NDArray[np.float64]:
+    def reset_model(self):
         self._reset_hand()
         self.obj_init_pos = self.adjust_initObjPos(self.init_config["obj_init_pos"])
         self.obj_init_angle = self.init_config["obj_init_angle"]
@@ -122,28 +112,32 @@ class SawyerShelfPlaceEnvV2(SawyerXYZEnv):
             (base_shelf_pos[:2], [self.obj_init_pos[-1]])
         )
 
-        self.model.body("shelf").pos = base_shelf_pos[-3:]
+        self.model.body_pos[
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "shelf")
+        ] = base_shelf_pos[-3:]
         mujoco.mj_forward(self.model, self.data)
-        self._target_pos = self.model.site("goal").pos + self.model.body("shelf").pos
+        self._target_pos = (
+            self.model.site_pos[
+                mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "goal")
+            ]
+            + self.model.body_pos[
+                mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "shelf")
+            ]
+        )
 
-        assert self.obj_init_pos is not None
         self._set_obj_xyz(self.obj_init_pos)
-        assert self._target_pos is not None
-        self._set_pos_site("goal", self._target_pos)
+
         return self._get_obs()
 
-    def compute_reward(
-        self, action: npt.NDArray[Any], obs: npt.NDArray[np.float64]
-    ) -> tuple[float, float, float, float, float, float]:
-        assert self._target_pos is not None and self.obj_init_pos is not None
-        _TARGET_RADIUS: float = 0.05
+    def compute_reward(self, action, obs):
+        _TARGET_RADIUS = 0.05
         tcp = self.tcp_center
         obj = obs[4:7]
         tcp_opened = obs[3]
         target = self._target_pos
 
-        obj_to_target = float(np.linalg.norm(obj - target))
-        tcp_to_obj = float(np.linalg.norm(obj - tcp))
+        obj_to_target = np.linalg.norm(obj - target)
+        tcp_to_obj = np.linalg.norm(obj - tcp)
         in_place_margin = np.linalg.norm(self.obj_init_pos - target)
 
         in_place = reward_utils.tolerance(
@@ -192,4 +186,24 @@ class SawyerShelfPlaceEnvV2(SawyerXYZEnv):
 
         if obj_to_target < _TARGET_RADIUS:
             reward = 10.0
-        return (reward, tcp_to_obj, tcp_opened, obj_to_target, object_grasped, in_place)
+        return [reward, tcp_to_obj, tcp_opened, obj_to_target, object_grasped, in_place]
+
+
+class TrainShelfPlacev2(SawyerShelfPlaceEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerShelfPlaceEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)
+
+
+class TestShelfPlacev2(SawyerShelfPlaceEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerShelfPlaceEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)

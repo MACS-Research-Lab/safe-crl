@@ -1,17 +1,14 @@
-from __future__ import annotations
-
-from typing import Any
-
 import mujoco
 import numpy as np
-import numpy.typing as npt
 from gymnasium.spaces import Box
 from scipy.spatial.transform import Rotation
 
+from metaworld.envs import reward_utils
 from metaworld.envs.asset_path_utils import full_v2_path_for
-from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import RenderMode, SawyerXYZEnv
-from metaworld.envs.mujoco.utils import reward_utils
-from metaworld.types import InitConfigDict
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import (
+    SawyerXYZEnv,
+    _assert_task_is_set,
+)
 
 
 class SawyerLeverPullEnvV2(SawyerXYZEnv):
@@ -30,26 +27,23 @@ class SawyerLeverPullEnvV2(SawyerXYZEnv):
 
     LEVER_RADIUS = 0.2
 
-    def __init__(
-        self,
-        render_mode: RenderMode | None = None,
-        camera_name: str | None = None,
-        camera_id: int | None = None,
-    ) -> None:
+    def __init__(self, tasks=None, render_mode=None):
         hand_low = (-0.5, 0.40, -0.15)
         hand_high = (0.5, 1, 0.5)
         obj_low = (-0.1, 0.7, 0.0)
         obj_high = (0.1, 0.8, 0.0)
 
         super().__init__(
+            self.model_name,
             hand_low=hand_low,
             hand_high=hand_high,
             render_mode=render_mode,
-            camera_name=camera_name,
-            camera_id=camera_id,
         )
 
-        self.init_config: InitConfigDict = {
+        if tasks is not None:
+            self.tasks = tasks
+
+        self.init_config = {
             "obj_init_pos": np.array([0, 0.7, 0.0]),
             "hand_init_pos": np.array([0, 0.4, 0.2], dtype=np.float32),
         }
@@ -62,18 +56,17 @@ class SawyerLeverPullEnvV2(SawyerXYZEnv):
         goal_high = self.hand_high
 
         self._random_reset_space = Box(
-            np.array(obj_low), np.array(obj_high), dtype=np.float64
+            np.array(obj_low),
+            np.array(obj_high),
         )
-        self.goal_space = Box(np.array(goal_low), np.array(goal_high), dtype=np.float64)
+        self.goal_space = Box(np.array(goal_low), np.array(goal_high))
 
     @property
-    def model_name(self) -> str:
+    def model_name(self):
         return full_v2_path_for("sawyer_xyz/sawyer_lever_pull.xml")
 
-    @SawyerXYZEnv._Decorators.assert_task_is_set
-    def evaluate_state(
-        self, obs: npt.NDArray[np.float64], action: npt.NDArray[np.float32]
-    ) -> tuple[float, dict[str, Any]]:
+    @_assert_task_is_set
+    def evaluate_state(self, obs, action):
         (
             reward,
             shoulder_to_lever,
@@ -94,17 +87,17 @@ class SawyerLeverPullEnvV2(SawyerXYZEnv):
 
         return reward, info
 
-    def _get_id_main_object(self) -> int:
-        return self.model.geom_name2id("objGeom")
+    def _get_id_main_object(self):
+        return self.unwrapped.model.geom_name2id("objGeom")
 
-    def _get_pos_objects(self) -> npt.NDArray[Any]:
+    def _get_pos_objects(self):
         return self._get_site_pos("leverStart")
 
-    def _get_quat_objects(self) -> npt.NDArray[Any]:
+    def _get_quat_objects(self):
         geom_xmat = self.data.geom("objGeom").xmat.reshape(3, 3)
         return Rotation.from_matrix(geom_xmat).as_quat()
 
-    def reset_model(self) -> npt.NDArray[np.float64]:
+    def reset_model(self):
         self._reset_hand()
         self.obj_init_pos = self._get_state_rand_vec()
         self.model.body_pos[
@@ -116,13 +109,10 @@ class SawyerLeverPullEnvV2(SawyerXYZEnv):
         self._target_pos = self.obj_init_pos + np.array(
             [0.12, 0.0, 0.25 + self.LEVER_RADIUS]
         )
-        self.model.site("goal").pos = self._target_pos
+        mujoco.mj_forward(self.model, self.data)
         return self._get_obs()
 
-    def compute_reward(
-        self, action: npt.NDArray[Any], obs: npt.NDArray[np.float64]
-    ) -> tuple[float, float, float, float, float]:
-        assert self._lever_pos_init is not None
+    def compute_reward(self, action, obs):
         gripper = obs[:3]
         lever = obs[4:7]
 
@@ -140,7 +130,7 @@ class SawyerLeverPullEnvV2(SawyerXYZEnv):
         # end in itself. Make sure to devalue it compared to the value of
         # actually lifting the lever
         ready_to_lift = reward_utils.tolerance(
-            float(np.linalg.norm(shoulder_to_lever)),
+            np.linalg.norm(shoulder_to_lever),
             bounds=(0, 0.02),
             margin=np.linalg.norm(shoulder_to_lever_init),
             sigmoid="long_tail",
@@ -149,7 +139,7 @@ class SawyerLeverPullEnvV2(SawyerXYZEnv):
         # The skill of the agent should be measured by its ability to get the
         # lever to point straight upward. This means we'll be measuring the
         # current angle of the lever's joint, and comparing with 90deg.
-        lever_angle = float(-self.data.joint("LeverAxis").qpos.item())
+        lever_angle = -self.data.joint("LeverAxis").qpos
         lever_angle_desired = np.pi / 2.0
 
         lever_error = abs(lever_angle - lever_angle_desired)
@@ -165,8 +155,8 @@ class SawyerLeverPullEnvV2(SawyerXYZEnv):
         )
 
         target = self._target_pos
-        obj_to_target = float(np.linalg.norm(lever - target))
-        in_place_margin = float(np.linalg.norm(self._lever_pos_init - target))
+        obj_to_target = np.linalg.norm(lever - target)
+        in_place_margin = np.linalg.norm(self._lever_pos_init - target)
 
         in_place = reward_utils.tolerance(
             obj_to_target,
@@ -179,8 +169,28 @@ class SawyerLeverPullEnvV2(SawyerXYZEnv):
         reward = 10.0 * reward_utils.hamacher_product(ready_to_lift, in_place)
         return (
             reward,
-            float(np.linalg.norm(shoulder_to_lever)),
+            np.linalg.norm(shoulder_to_lever),
             ready_to_lift,
             lever_error,
             lever_engagement,
         )
+
+
+class TrainLeverPullv2(SawyerLeverPullEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerLeverPullEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)
+
+
+class TestLeverPullv2(SawyerLeverPullEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerLeverPullEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)

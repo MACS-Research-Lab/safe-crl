@@ -7,7 +7,7 @@ import numpy.typing as npt
 from gymnasium.spaces import Box
 
 from metaworld.envs.asset_path_utils import full_v2_path_for, full_safe_path_for
-from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import RenderMode, SawyerXYZEnv
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import SawyerXYZEnv, _assert_task_is_set
 from metaworld.envs.mujoco.utils import reward_utils, rotation
 from metaworld.types import HammerInitConfigDict
 
@@ -17,9 +17,7 @@ class SafeSawyerHammerEnv(SawyerXYZEnv):
 
     def __init__(
         self,
-        render_mode: RenderMode | None = None,
-        camera_name: str | None = None,
-        camera_id: int | None = None,
+        render_mode = None,
     ) -> None:
         hand_low = (-0.5, 0.40, 0.05)
         hand_high = (0.5, 1, 0.5)
@@ -31,11 +29,10 @@ class SafeSawyerHammerEnv(SawyerXYZEnv):
         safe_high = (0.15, 0.65, 0.01)
 
         super().__init__(
+            self.model_name,
             hand_low=hand_low,
             hand_high=hand_high,
             render_mode=render_mode,
-            camera_name=camera_name,
-            camera_id=camera_id,
             safety_constrained=True
         )
 
@@ -63,7 +60,7 @@ class SafeSawyerHammerEnv(SawyerXYZEnv):
     def model_name(self) -> str:
         return full_safe_path_for("safe_hammer.xml")
 
-    @SawyerXYZEnv._Decorators.assert_task_is_set
+    @_assert_task_is_set
     def evaluate_state(
         self, obs: npt.NDArray[np.float64], action: npt.NDArray[np.float32]
     ) -> tuple[float, dict[str, Any]]:

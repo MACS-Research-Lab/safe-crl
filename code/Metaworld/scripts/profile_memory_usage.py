@@ -2,7 +2,7 @@
 """Test script for profiling average memory footprint."""
 import memory_profiler
 
-from metaworld.envs.mujoco.env_dict import ALL_V2_ENVIRONMENTS
+from metaworld.envs.mujoco.sawyer_xyz.env_lists import HARD_MODE_LIST
 from tests.helpers import step_env
 
 
@@ -22,7 +22,7 @@ def build_and_step_all(classes):
 
 def profile_hard_mode_indepedent():
     profile = {}
-    for env_cls in ALL_V2_ENVIRONMENTS:
+    for env_cls in HARD_MODE_LIST:
         target = (build_and_step, [env_cls], {})
         memory_usage = memory_profiler.memory_usage(target)
         profile[env_cls] = max(memory_usage)
@@ -31,7 +31,7 @@ def profile_hard_mode_indepedent():
 
 
 def profile_hard_mode_shared():
-    target = (build_and_step_all, [ALL_V2_ENVIRONMENTS], {})
+    target = (build_and_step_all, [HARD_MODE_LIST], {})
     usage = memory_profiler.memory_usage(target)
     return max(usage)
 
@@ -48,13 +48,17 @@ if __name__ == "__main__":
     print("| min      | mean     | max      |")
     print("|----------|----------|----------|")
     print(
-        f"| {min_independent:.1f} MB | {mean_independent:.1f} MB | {max_independent:.1f} MB |"
+        "| {:.1f} MB | {:.1f} MB | {:.1f} MB |".format(
+            min_independent, mean_independent, max_independent
+        )
     )
     print("\n")
 
     print("---------    Shared memory footprint    ---------")
     max_usage = profile_hard_mode_shared()
-    mean_shared = max_usage / len(ALL_V2_ENVIRONMENTS)
+    mean_shared = max_usage / len(HARD_MODE_LIST)
     print(
-        f"Mean memory footprint (n = {len(ALL_V2_ENVIRONMENTS)}): {mean_shared:.1f} MB"
+        "Mean memory footprint (n = {}): {:.1f} MB".format(
+            len(HARD_MODE_LIST), mean_shared
+        )
     )

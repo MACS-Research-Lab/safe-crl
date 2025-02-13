@@ -1,27 +1,19 @@
-from __future__ import annotations
-
-from typing import Any
-
 import mujoco
 import numpy as np
-import numpy.typing as npt
 from gymnasium.spaces import Box
 
+from metaworld.envs import reward_utils
 from metaworld.envs.asset_path_utils import full_v2_path_for
-from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import RenderMode, SawyerXYZEnv
-from metaworld.envs.mujoco.utils import reward_utils
-from metaworld.types import InitConfigDict
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import (
+    SawyerXYZEnv,
+    _assert_task_is_set,
+)
 
 
 class SawyerNutDisassembleEnvV2(SawyerXYZEnv):
-    WRENCH_HANDLE_LENGTH: float = 0.02
+    WRENCH_HANDLE_LENGTH = 0.02
 
-    def __init__(
-        self,
-        render_mode: RenderMode | None = None,
-        camera_name: str | None = None,
-        camera_id: int | None = None,
-    ) -> None:
+    def __init__(self, tasks=None, render_mode=None):
         hand_low = (-0.5, 0.40, 0.05)
         hand_high = (0.5, 1, 0.5)
         obj_low = (0.0, 0.6, 0.025)
@@ -30,14 +22,16 @@ class SawyerNutDisassembleEnvV2(SawyerXYZEnv):
         goal_high = (0.1, 0.75, 0.1701)
 
         super().__init__(
+            self.model_name,
             hand_low=hand_low,
             hand_high=hand_high,
             render_mode=render_mode,
-            camera_name=camera_name,
-            camera_id=camera_id,
         )
 
-        self.init_config: InitConfigDict = {
+        if tasks is not None:
+            self.tasks = tasks
+
+        self.init_config = {
             "obj_init_angle": 0.3,
             "obj_init_pos": np.array([0, 0.7, 0.025]),
             "hand_init_pos": np.array((0, 0.4, 0.2), dtype=np.float32),
@@ -50,22 +44,18 @@ class SawyerNutDisassembleEnvV2(SawyerXYZEnv):
         self._random_reset_space = Box(
             np.hstack((obj_low, goal_low)),
             np.hstack((obj_high, goal_high)),
-            dtype=np.float64,
         )
         self.goal_space = Box(
             np.array(goal_low) + np.array([0.0, 0.0, 0.005]),
             np.array(goal_high) + np.array([0.0, 0.0, 0.005]),
-            dtype=np.float64,
         )
 
     @property
-    def model_name(self) -> str:
+    def model_name(self):
         return full_v2_path_for("sawyer_xyz/sawyer_assembly_peg.xml")
 
-    @SawyerXYZEnv._Decorators.assert_task_is_set
-    def evaluate_state(
-        self, obs: npt.NDArray[np.float64], action: npt.NDArray[np.float32]
-    ) -> tuple[float, dict[str, Any]]:
+    @_assert_task_is_set
+    def evaluate_state(self, obs, action):
         (
             reward,
             reward_grab,
@@ -87,19 +77,16 @@ class SawyerNutDisassembleEnvV2(SawyerXYZEnv):
         return reward, info
 
     @property
-    def _target_site_config(self) -> list[tuple[str, npt.NDArray[Any]]]:
-        assert (
-            self._target_pos is not None
-        ), "`reset_model()` must be called before `_target_site_config`."
+    def _target_site_config(self):
         return [("pegTop", self._target_pos)]
 
-    def _get_id_main_object(self) -> int:
-        return self.model.geom_name2id("WrenchHandle")
+    def _get_id_main_object(self):
+        return self.unwrapped.model.geom_name2id("WrenchHandle")
 
-    def _get_pos_objects(self) -> npt.NDArray[Any]:
+    def _get_pos_objects(self):
         return self._get_site_pos("RoundNut-8")
 
-    def _get_quat_objects(self) -> npt.NDArray[Any]:
+    def _get_quat_objects(self):
         return self.data.body("RoundNut").xquat
 
     def _get_obs_dict(self):
@@ -107,7 +94,7 @@ class SawyerNutDisassembleEnvV2(SawyerXYZEnv):
         obs_dict["state_achieved_goal"] = self.get_body_com("RoundNut")
         return obs_dict
 
-    def reset_model(self) -> npt.NDArray[np.float64]:
+    def reset_model(self):
         self._reset_hand()
         self._target_pos = self.goal.copy()
         self.obj_init_pos = np.array(self.init_config["obj_init_pos"])
@@ -121,31 +108,33 @@ class SawyerNutDisassembleEnvV2(SawyerXYZEnv):
 
         peg_pos = self.obj_init_pos + np.array([0.0, 0.0, 0.03])
         peg_top_pos = self.obj_init_pos + np.array([0.0, 0.0, 0.08])
-        self.model.body("peg").pos = peg_pos
-        self.model.site("pegTop").pos = peg_top_pos
+        self.model.body_pos[
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "peg")
+        ] = peg_pos
+        self.model.site_pos[
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "pegTop")
+        ] = peg_top_pos
         mujoco.mj_forward(self.model, self.data)
         self._set_obj_xyz(self.obj_init_pos)
         return self._get_obs()
 
     @staticmethod
-    def _reward_quat(obs: npt.NDArray[np.float64]) -> float:
+    def _reward_quat(obs):
         # Ideal laid-down wrench has quat [.707, 0, 0, .707]
         # Rather than deal with an angle between quaternions, just approximate:
         ideal = np.array([0.707, 0, 0, 0.707])
-        error = float(np.linalg.norm(obs[7:11] - ideal))
+        error = np.linalg.norm(obs[7:11] - ideal)
         return max(1.0 - error / 0.4, 0.0)
 
     @staticmethod
-    def _reward_pos(
-        wrench_center: npt.NDArray[Any], target_pos: npt.NDArray[Any]
-    ) -> float:
+    def _reward_pos(wrench_center, target_pos):
         pos_error = target_pos + np.array([0.0, 0.0, 0.1]) - wrench_center
 
         a = 0.1  # Relative importance of just *trying* to lift the wrench
         b = 0.9  # Relative importance of placing the wrench on the peg
         lifted = wrench_center[2] > 0.02
         in_place = a * float(lifted) + b * reward_utils.tolerance(
-            float(np.linalg.norm(pos_error)),
+            np.linalg.norm(pos_error),
             bounds=(0, 0.02),
             margin=0.2,
             sigmoid="long_tail",
@@ -153,13 +142,7 @@ class SawyerNutDisassembleEnvV2(SawyerXYZEnv):
 
         return in_place
 
-    def compute_reward(
-        self, actions: npt.NDArray[Any], obs: npt.NDArray[np.float64]
-    ) -> tuple[float, float, float, float, bool]:
-        assert (
-            self._target_pos is not None
-        ), "`reset_model()` must be called before `compute_reward()`."
-
+    def compute_reward(self, actions, obs):
         hand = obs[:3]
         wrench = obs[4:7]
         wrench_center = self._get_site_pos("RoundNut")
@@ -201,3 +184,23 @@ class SawyerNutDisassembleEnvV2(SawyerXYZEnv):
             reward_in_place,
             success,
         )
+
+
+class TrainDisassemblev2(SawyerNutDisassembleEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerNutDisassembleEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)
+
+
+class TestDisassemblev2(SawyerNutDisassembleEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerNutDisassembleEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)

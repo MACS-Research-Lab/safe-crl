@@ -1,9 +1,4 @@
-from __future__ import annotations
-
-from typing import Any
-
 import numpy as np
-import numpy.typing as npt
 
 from metaworld.policies.action import Action
 from metaworld.policies.policy import Policy, assert_fully_parsed, move
@@ -12,7 +7,7 @@ from metaworld.policies.policy import Policy, assert_fully_parsed, move
 class SawyerCoffeePushV2Policy(Policy):
     @staticmethod
     @assert_fully_parsed
-    def _parse_obs(obs: npt.NDArray[np.float64]) -> dict[str, npt.NDArray[np.float64]]:
+    def _parse_obs(obs):
         return {
             "hand_pos": obs[:3],
             "gripper": obs[3],
@@ -22,7 +17,7 @@ class SawyerCoffeePushV2Policy(Policy):
             "unused_info_2": obs[-1],
         }
 
-    def get_action(self, obs: npt.NDArray[np.float64]) -> npt.NDArray[np.float32]:
+    def get_action(self, obs):
         o_d = self._parse_obs(obs)
 
         action = Action({"delta_pos": np.arange(3), "grab_effort": 3})
@@ -35,7 +30,7 @@ class SawyerCoffeePushV2Policy(Policy):
         return action.array
 
     @staticmethod
-    def _desired_pos(o_d: dict[str, npt.NDArray[np.float64]]) -> npt.NDArray[Any]:
+    def _desired_pos(o_d):
         pos_curr = o_d["hand_pos"]
         pos_mug = o_d["mug_pos"] + np.array([0.01, 0.0, 0.05])
         pos_goal = o_d["goal_xy"]
@@ -48,7 +43,7 @@ class SawyerCoffeePushV2Policy(Policy):
             return np.array([pos_goal[0], pos_goal[1], 0.1])
 
     @staticmethod
-    def _grab_effort(o_d: dict[str, npt.NDArray[np.float64]]) -> float:
+    def _grab_effort(o_d):
         pos_curr = o_d["hand_pos"]
         pos_mug = o_d["mug_pos"] + np.array([0.01, 0.0, 0.05])
 

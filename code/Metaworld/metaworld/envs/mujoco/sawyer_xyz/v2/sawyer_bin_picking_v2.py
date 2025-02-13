@@ -1,15 +1,12 @@
-from __future__ import annotations
-
-from typing import Any
-
 import numpy as np
-import numpy.typing as npt
 from gymnasium.spaces import Box
 
+from metaworld.envs import reward_utils
 from metaworld.envs.asset_path_utils import full_v2_path_for
-from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import RenderMode, SawyerXYZEnv
-from metaworld.envs.mujoco.utils import reward_utils
-from metaworld.types import InitConfigDict
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import (
+    SawyerXYZEnv,
+    _assert_task_is_set,
+)
 
 
 class SawyerBinPickingEnvV2(SawyerXYZEnv):
@@ -26,12 +23,7 @@ class SawyerBinPickingEnvV2(SawyerXYZEnv):
         - (11/23/20) Updated reward function to new pick-place style
     """
 
-    def __init__(
-        self,
-        render_mode: RenderMode | None = None,
-        camera_name: str | None = None,
-        camera_id: int | None = None,
-    ) -> None:
+    def __init__(self, tasks=None, render_mode=None):
         hand_low = (-0.5, 0.40, 0.07)
         hand_high = (0.5, 1, 0.5)
         obj_low = (-0.21, 0.65, 0.02)
@@ -41,13 +33,14 @@ class SawyerBinPickingEnvV2(SawyerXYZEnv):
         goal_high = np.array([0.1201, 0.701, +0.001])
 
         super().__init__(
+            self.model_name,
             hand_low=hand_low,
             hand_high=hand_high,
             render_mode=render_mode,
-            camera_name=camera_name,
-            camera_id=camera_id,
         )
-        self.init_config: InitConfigDict = {
+        if tasks is not None:
+            self.tasks = tasks
+        self.init_config = {
             "obj_init_angle": 0.3,
             "obj_init_pos": np.array([-0.12, 0.7, 0.02]),
             "hand_init_pos": np.array((0, 0.6, 0.2)),
@@ -57,35 +50,30 @@ class SawyerBinPickingEnvV2(SawyerXYZEnv):
         self.obj_init_angle = self.init_config["obj_init_angle"]
         self.hand_init_pos = self.init_config["hand_init_pos"]
 
-        self._target_to_obj_init: float | None = None
+        self._target_to_obj_init = None
 
         self.hand_and_obj_space = Box(
             np.hstack((self.hand_low, obj_low)),
             np.hstack((self.hand_high, obj_high)),
-            dtype=np.float64,
         )
 
         self.goal_and_obj_space = Box(
             np.hstack((goal_low[:2], obj_low[:2])),
             np.hstack((goal_high[:2], obj_high[:2])),
-            dtype=np.float64,
         )
 
-        self.goal_space = Box(goal_low, goal_high, dtype=np.float64)
+        self.goal_space = Box(goal_low, goal_high)
         self._random_reset_space = Box(
             np.hstack((obj_low, goal_low)),
             np.hstack((obj_high, goal_high)),
-            dtype=np.float64,
         )
 
     @property
-    def model_name(self) -> str:
+    def model_name(self):
         return full_v2_path_for("sawyer_xyz/sawyer_bin_picking.xml")
 
-    @SawyerXYZEnv._Decorators.assert_task_is_set
-    def evaluate_state(
-        self, obs: npt.NDArray[np.float64], action: npt.NDArray[np.float32]
-    ) -> tuple[float, dict[str, Any]]:
+    @_assert_task_is_set
+    def evaluate_state(self, obs, action):
         (
             reward,
             near_object,
@@ -108,19 +96,19 @@ class SawyerBinPickingEnvV2(SawyerXYZEnv):
         return reward, info
 
     @property
-    def _target_site_config(self) -> list[tuple[str, npt.NDArray[Any]]]:
+    def _target_site_config(self):
         return []
 
-    def _get_id_main_object(self) -> int:
-        return self.model.geom_name2id("objGeom")
+    def _get_id_main_object(self):
+        return self.unwrapped.model.geom_name2id("objGeom")
 
-    def _get_pos_objects(self) -> npt.NDArray[Any]:
+    def _get_pos_objects(self):
         return self.get_body_com("obj")
 
-    def _get_quat_objects(self) -> npt.NDArray[Any]:
+    def _get_quat_objects(self):
         return self.data.body("obj").xquat
 
-    def reset_model(self) -> npt.NDArray[np.float64]:
+    def reset_model(self):
         self._reset_hand()
         self._target_pos = self.goal.copy()
         self.obj_init_pos = self.init_config["obj_init_pos"]
@@ -128,7 +116,7 @@ class SawyerBinPickingEnvV2(SawyerXYZEnv):
         obj_height = self.get_body_com("obj")[2]
 
         self.obj_init_pos = self._get_state_rand_vec()[:2]
-        self.obj_init_pos = np.concatenate([self.obj_init_pos, [obj_height]])
+        self.obj_init_pos = np.concatenate((self.obj_init_pos, [obj_height]))
 
         self._set_obj_xyz(self.obj_init_pos)
         self._target_pos = self.get_body_com("bin_goal")
@@ -136,17 +124,11 @@ class SawyerBinPickingEnvV2(SawyerXYZEnv):
 
         return self._get_obs()
 
-    def compute_reward(
-        self, action: npt.NDArray[Any], obs: npt.NDArray[Any]
-    ) -> tuple[float, bool, bool, float, float, float]:
-        assert (
-            self.obj_init_pos is not None and self._target_pos is not None
-        ), "`reset_model()` must be called before `compute_reward()`."
-
+    def compute_reward(self, action, obs):
         hand = obs[:3]
         obj = obs[4:7]
 
-        target_to_obj = float(np.linalg.norm(obj - self._target_pos))
+        target_to_obj = np.linalg.norm(obj - self._target_pos)
         if self._target_to_obj_init is None:
             self._target_to_obj_init = target_to_obj
 
@@ -195,9 +177,9 @@ class SawyerBinPickingEnvV2(SawyerXYZEnv):
         )
         reward = reward_utils.hamacher_product(object_grasped, in_place)
 
-        near_object = bool(np.linalg.norm(obj - hand) < 0.04)
-        pinched_without_obj = bool(obs[3] < 0.43)
-        lifted = bool(obj[2] - 0.02 > self.obj_init_pos[2])
+        near_object = np.linalg.norm(obj - hand) < 0.04
+        pinched_without_obj = obs[3] < 0.43
+        lifted = obj[2] - 0.02 > self.obj_init_pos[2]
         # Increase reward when properly grabbed obj
         grasp_success = near_object and lifted and not pinched_without_obj
         if grasp_success:
@@ -214,3 +196,23 @@ class SawyerBinPickingEnvV2(SawyerXYZEnv):
             object_grasped,
             in_place,
         )
+
+
+class TrainBinPickingv2(SawyerBinPickingEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerBinPickingEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)
+
+
+class TestBinPickingv2(SawyerBinPickingEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerBinPickingEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)

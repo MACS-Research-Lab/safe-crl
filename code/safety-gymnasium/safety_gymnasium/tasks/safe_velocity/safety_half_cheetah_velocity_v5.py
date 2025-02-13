@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 """HalfCheetah environment with a safety constraint on velocity and feet fault nonstationarity."""
-# This one is only used for visualization purposes. Use v4 for experiments
 
 from gymnasium.envs.mujoco.half_cheetah_v4 import HalfCheetahEnv
 

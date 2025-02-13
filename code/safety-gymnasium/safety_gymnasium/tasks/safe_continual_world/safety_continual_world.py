@@ -1,7 +1,7 @@
 """Continual World environment with a safety constraint on not spilling a mug."""
 
 from gymnasium import Env
-import metaworld
+# import metaworld
 import numpy as np
 import random
 

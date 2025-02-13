@@ -1,30 +1,19 @@
 <mujoco>
     <include file="../scene/basic_scene.xml"/>
     <include file="../objects/assets/basketball_dependencies.xml"/>
-    <!-- <include file="../objects/assets/mug_dependencies.xml"/> -->
-    <include file="../objects/assets/coffeemachine_dependencies.xml"/>
     <include file="../objects/assets/xyz_base_dependencies.xml"/>
 
   <worldbody>
 
-      <!-- <body name="bsktball" pos="0 0.6 0.03">
-        <freejoint/>
-        <include file="../objects/assets/basketball.xml"/>
-      </body> -->
-      <include file="../objects/assets/xyz_base.xml"/>
       <body name="bsktball" pos="0 0.6 0.03">
         <freejoint/>
         <include file="../objects/assets/basketball.xml"/>
       </body>
+      <include file="../objects/assets/xyz_base.xml"/>
 
       <body name="basket_goal" pos="0. 0.9 0">
          <include file="../objects/assets/basketballhoop.xml"/>
 
-      </body>
-
-      <body name="obstacle" pos="0.1 0.65 0.2">
-        <freejoint/>
-        <include file="../objects/assets/mug.xml"/>
       </body>
 
   </worldbody>

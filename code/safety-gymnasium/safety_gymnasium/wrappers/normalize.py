@@ -17,7 +17,7 @@
 
 import gymnasium
 import numpy as np
-from gym.wrappers.normalize import NormalizeObservation, NormalizeReward, RunningMeanStd
+from gymnasium.wrappers.normalize import NormalizeObservation, NormalizeReward, RunningMeanStd
 
 
 class SafeNormalizeObservation(NormalizeObservation):

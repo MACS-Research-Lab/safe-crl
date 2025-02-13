@@ -7,10 +7,10 @@ See/modify `char_to_action` to set the key-to-action mapping.
 import sys
 
 import numpy as np
-import pygame  # type: ignore
-from pygame.locals import KEYDOWN, QUIT  # type: ignore
+import pygame
+from pygame.locals import KEYDOWN, QUIT
 
-from metaworld.envs.mujoco.sawyer_xyz.v2 import SawyerPickPlaceEnvV2
+from metaworld.envs.mujoco.sawyer_xyz import SawyerPickPlaceEnvV2
 
 pygame.init()
 screen = pygame.display.set_mode((400, 300))
@@ -44,7 +44,7 @@ env._freeze_rand_vec = True
 lock_action = False
 random_action = False
 obs = env.reset()
-action = np.zeros(4, dtype=np.float32)
+action = np.zeros(4)
 while True:
     done = False
     if not lock_action:
@@ -65,13 +65,13 @@ while True:
                     action[3] = 1
                 elif new_action == "open":
                     action[3] = -1
-                elif new_action is not None and isinstance(new_action, np.ndarray):
+                elif new_action is not None:
                     action[:3] = new_action[:3]
                 else:
-                    action = np.zeros(3, dtype=np.float32)
+                    action = np.zeros(3)
                 print(action)
     else:
-        action = np.array(env.action_space.sample(), dtype=np.float32)
+        action = env.action_space.sample()
     ob, reward, done, infos = env.step(action)
     # time.sleep(1)
     if done:

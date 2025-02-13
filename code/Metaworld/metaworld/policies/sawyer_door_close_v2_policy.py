@@ -1,9 +1,4 @@
-from __future__ import annotations
-
-from typing import Any
-
 import numpy as np
-import numpy.typing as npt
 
 from metaworld.policies.action import Action
 from metaworld.policies.policy import Policy, assert_fully_parsed, move
@@ -12,7 +7,7 @@ from metaworld.policies.policy import Policy, assert_fully_parsed, move
 class SawyerDoorCloseV2Policy(Policy):
     @staticmethod
     @assert_fully_parsed
-    def _parse_obs(obs: npt.NDArray[np.float64]) -> dict[str, npt.NDArray[np.float64]]:
+    def _parse_obs(obs):
         return {
             "hand_pos": obs[:3],
             "unused_1": obs[3],
@@ -21,7 +16,7 @@ class SawyerDoorCloseV2Policy(Policy):
             "goal_pos": obs[-3:],
         }
 
-    def get_action(self, obs: npt.NDArray[np.float64]) -> npt.NDArray[np.float32]:
+    def get_action(self, obs):
         o_d = self._parse_obs(obs)
 
         action = Action({"delta_pos": np.arange(3), "grab_effort": 3})
@@ -34,7 +29,7 @@ class SawyerDoorCloseV2Policy(Policy):
         return action.array
 
     @staticmethod
-    def _desired_pos(o_d: dict[str, npt.NDArray[np.float64]]) -> npt.NDArray[Any]:
+    def _desired_pos(o_d):
         pos_curr = o_d["hand_pos"]
         pos_door = o_d["door_pos"]
         pos_door += np.array([0.05, 0.12, 0.1])

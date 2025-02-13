@@ -1,25 +1,18 @@
-from __future__ import annotations
-
-from typing import Any
-
+import mujoco
 import numpy as np
-import numpy.typing as npt
 from gymnasium.spaces import Box
 from scipy.spatial.transform import Rotation
 
+from metaworld.envs import reward_utils
 from metaworld.envs.asset_path_utils import full_v2_path_for
-from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import RenderMode, SawyerXYZEnv
-from metaworld.envs.mujoco.utils import reward_utils
-from metaworld.types import InitConfigDict
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import (
+    SawyerXYZEnv,
+    _assert_task_is_set,
+)
 
 
 class SawyerCoffeePullEnvV2(SawyerXYZEnv):
-    def __init__(
-        self,
-        render_mode: RenderMode | None = None,
-        camera_name: str | None = None,
-        camera_id: int | None = None,
-    ) -> None:
+    def __init__(self, tasks=None, render_mode=None):
         hand_low = (-0.5, 0.40, 0.05)
         hand_high = (0.5, 1, 0.5)
         obj_low = (-0.05, 0.7, -0.001)
@@ -28,14 +21,16 @@ class SawyerCoffeePullEnvV2(SawyerXYZEnv):
         goal_high = (0.1, 0.65, +0.001)
 
         super().__init__(
+            self.model_name,
             hand_low=hand_low,
             hand_high=hand_high,
             render_mode=render_mode,
-            camera_name=camera_name,
-            camera_id=camera_id,
         )
 
-        self.init_config: InitConfigDict = {
+        if tasks is not None:
+            self.tasks = tasks
+
+        self.init_config = {
             "obj_init_pos": np.array([0, 0.75, 0.0]),
             "obj_init_angle": 0.3,
             "hand_init_pos": np.array([0.0, 0.4, 0.2]),
@@ -48,18 +43,15 @@ class SawyerCoffeePullEnvV2(SawyerXYZEnv):
         self._random_reset_space = Box(
             np.hstack((obj_low, goal_low)),
             np.hstack((obj_high, goal_high)),
-            dtype=np.float64,
         )
-        self.goal_space = Box(np.array(goal_low), np.array(goal_high), dtype=np.float64)
+        self.goal_space = Box(np.array(goal_low), np.array(goal_high))
 
     @property
-    def model_name(self) -> str:
+    def model_name(self):
         return full_v2_path_for("sawyer_xyz/sawyer_coffee.xml")
 
-    @SawyerXYZEnv._Decorators.assert_task_is_set
-    def evaluate_state(
-        self, obs: npt.NDArray[np.float64], action: npt.NDArray[np.float32]
-    ) -> tuple[float, dict[str, Any]]:
+    @_assert_task_is_set
+    def evaluate_state(self, obs, action):
         (
             reward,
             tcp_to_obj,
@@ -70,7 +62,7 @@ class SawyerCoffeePullEnvV2(SawyerXYZEnv):
         ) = self.compute_reward(action, obs)
         success = float(obj_to_target <= 0.07)
         near_object = float(tcp_to_obj <= 0.03)
-        grasp_success = float(self.touching_main_object and (tcp_open > 0))
+        grasp_success = float(self.touching_object and (tcp_open > 0))
 
         info = {
             "success": success,
@@ -85,30 +77,24 @@ class SawyerCoffeePullEnvV2(SawyerXYZEnv):
         return reward, info
 
     @property
-    def _target_site_config(self) -> list[tuple[str, npt.NDArray[Any]]]:
-        assert (
-            self._target_pos is not None
-        ), "`reset_model()` must be called before `_target_site_config`."
+    def _target_site_config(self):
         return [("mug_goal", self._target_pos)]
 
-    def _get_id_main_object(self) -> int:
-        return self.data.geom("mug").id
-
-    def _get_pos_objects(self) -> npt.NDArray[Any]:
+    def _get_pos_objects(self):
         return self.get_body_com("obj")
 
-    def _get_quat_objects(self) -> npt.NDArray[Any]:
+    def _get_quat_objects(self):
         geom_xmat = self.data.geom("mug").xmat.reshape(3, 3)
         return Rotation.from_matrix(geom_xmat).as_quat()
 
-    def _set_obj_xyz(self, pos: npt.NDArray[Any]) -> None:
+    def _set_obj_xyz(self, pos):
         qpos = self.data.qpos.flatten()
         qvel = self.data.qvel.flatten()
         qpos[0:3] = pos.copy()
         qvel[9:15] = 0
         self.set_state(qpos, qvel)
 
-    def reset_model(self) -> npt.NDArray[np.float64]:
+    def reset_model(self):
         self._reset_hand()
 
         pos_mug_init, pos_mug_goal = np.split(self._get_state_rand_vec(), 2)
@@ -119,18 +105,14 @@ class SawyerCoffeePullEnvV2(SawyerXYZEnv):
         self.obj_init_pos = pos_mug_init
 
         pos_machine = pos_mug_init + np.array([0.0, 0.22, 0.0])
-        self.model.body("coffee_machine").pos = pos_machine
+        self.model.body_pos[
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "coffee_machine")
+        ] = pos_machine
 
         self._target_pos = pos_mug_goal
-        self.model.site("mug_goal").pos = self._target_pos
         return self._get_obs()
 
-    def compute_reward(
-        self, action: npt.NDArray[Any], obs: npt.NDArray[np.float64]
-    ) -> tuple[float, float, float, float, float, float]:
-        assert (
-            self._target_pos is not None
-        ), "`reset_model()` must be called before `compute_reward()`."
+    def compute_reward(self, action, obs):
         obj = obs[4:7]
         target = self._target_pos.copy()
 
@@ -148,7 +130,7 @@ class SawyerCoffeePullEnvV2(SawyerXYZEnv):
             sigmoid="long_tail",
         )
         tcp_opened = obs[3]
-        tcp_to_obj = float(np.linalg.norm(obj - self.tcp_center))
+        tcp_to_obj = np.linalg.norm(obj - self.tcp_center)
 
         object_grasped = self._gripper_caging_reward(
             action,
@@ -171,7 +153,27 @@ class SawyerCoffeePullEnvV2(SawyerXYZEnv):
             reward,
             tcp_to_obj,
             tcp_opened,
-            float(np.linalg.norm(obj - target)),  # recompute to avoid `scale` above
+            np.linalg.norm(obj - target),  # recompute to avoid `scale` above
             object_grasped,
             in_place,
         )
+
+
+class TrainCoffeePullv2(SawyerCoffeePullEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerCoffeePullEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)
+
+
+class TestCoffeePullv2(SawyerCoffeePullEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerCoffeePullEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)

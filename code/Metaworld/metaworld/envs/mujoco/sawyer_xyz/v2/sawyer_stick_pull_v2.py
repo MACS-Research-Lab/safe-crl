@@ -1,25 +1,17 @@
-from __future__ import annotations
-
-from typing import Any
-
 import numpy as np
-import numpy.typing as npt
 from gymnasium.spaces import Box
 from scipy.spatial.transform import Rotation
 
+from metaworld.envs import reward_utils
 from metaworld.envs.asset_path_utils import full_v2_path_for
-from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import RenderMode, SawyerXYZEnv
-from metaworld.envs.mujoco.utils import reward_utils
-from metaworld.types import ObservationDict, StickInitConfigDict
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import (
+    SawyerXYZEnv,
+    _assert_task_is_set,
+)
 
 
 class SawyerStickPullEnvV2(SawyerXYZEnv):
-    def __init__(
-        self,
-        render_mode: RenderMode | None = None,
-        camera_name: str | None = None,
-        camera_id: int | None = None,
-    ) -> None:
+    def __init__(self, tasks=None, render_mode=None):
         hand_low = (-0.5, 0.35, 0.05)
         hand_high = (0.5, 1, 0.5)
         obj_low = (-0.1, 0.55, 0.000)
@@ -28,14 +20,16 @@ class SawyerStickPullEnvV2(SawyerXYZEnv):
         goal_high = (0.45, 0.55, 0.0201)
 
         super().__init__(
+            self.model_name,
             hand_low=hand_low,
             hand_high=hand_high,
             render_mode=render_mode,
-            camera_name=camera_name,
-            camera_id=camera_id,
         )
 
-        self.init_config: StickInitConfigDict = {
+        if tasks is not None:
+            self.tasks = tasks
+
+        self.init_config = {
             "stick_init_pos": np.array([0, 0.6, 0.02]),
             "hand_init_pos": np.array([0, 0.6, 0.2]),
         }
@@ -46,22 +40,19 @@ class SawyerStickPullEnvV2(SawyerXYZEnv):
         # Fix object init position.
         self.obj_init_pos = np.array([0.2, 0.69, 0.0])
         self.obj_init_qpos = np.array([0.0, 0.09])
-        self.obj_space = Box(np.array(obj_low), np.array(obj_high), dtype=np.float64)
-        self.goal_space = Box(np.array(goal_low), np.array(goal_high), dtype=np.float64)
+        self.obj_space = Box(np.array(obj_low), np.array(obj_high))
+        self.goal_space = Box(np.array(goal_low), np.array(goal_high))
         self._random_reset_space = Box(
             np.hstack((obj_low, goal_low)),
             np.hstack((obj_high, goal_high)),
-            dtype=np.float64,
         )
 
     @property
-    def model_name(self) -> str:
+    def model_name(self):
         return full_v2_path_for("sawyer_xyz/sawyer_stick_obj.xml")
 
-    @SawyerXYZEnv._Decorators.assert_task_is_set
-    def evaluate_state(
-        self, obs: npt.NDArray[np.float64], action: npt.NDArray[np.float32]
-    ) -> tuple[float, dict[str, Any]]:
+    @_assert_task_is_set
+    def evaluate_state(self, obs, action):
         stick = obs[4:7]
         handle = obs[11:14]
         end_of_stick = self._get_site_pos("stick_end")
@@ -74,14 +65,13 @@ class SawyerStickPullEnvV2(SawyerXYZEnv):
             stick_in_place,
         ) = self.compute_reward(action, obs)
 
-        assert self._target_pos is not None and self.obj_init_pos is not None
         success = float(
             (np.linalg.norm(handle - self._target_pos) <= 0.12)
             and self._stick_is_inserted(handle, end_of_stick)
         )
         near_object = float(tcp_to_obj <= 0.03)
         grasp_success = float(
-            self.touching_main_object
+            self.touching_object
             and (tcp_open > 0)
             and (stick[2] - 0.02 > self.obj_init_pos[2])
         )
@@ -98,7 +88,7 @@ class SawyerStickPullEnvV2(SawyerXYZEnv):
 
         return reward, info
 
-    def _get_pos_objects(self) -> npt.NDArray[Any]:
+    def _get_pos_objects(self):
         return np.hstack(
             (
                 self.get_body_com("stick").copy(),
@@ -106,7 +96,7 @@ class SawyerStickPullEnvV2(SawyerXYZEnv):
             )
         )
 
-    def _get_quat_objects(self) -> npt.NDArray[Any]:
+    def _get_quat_objects(self):
         geom_xmat = self.data.body("stick").xmat.reshape(3, 3)
         return np.hstack(
             (
@@ -122,26 +112,26 @@ class SawyerStickPullEnvV2(SawyerXYZEnv):
             )
         )
 
-    def _get_obs_dict(self) -> ObservationDict:
+    def _get_obs_dict(self):
         obs_dict = super()._get_obs_dict()
         obs_dict["state_achieved_goal"] = self._get_site_pos("insertion")
         return obs_dict
 
-    def _set_stick_xyz(self, pos: npt.NDArray[Any]) -> None:
+    def _set_stick_xyz(self, pos):
         qpos = self.data.qpos.flat.copy()
         qvel = self.data.qvel.flat.copy()
         qpos[9:12] = pos.copy()
         qvel[9:15] = 0
         self.set_state(qpos, qvel)
 
-    def _set_obj_xyz(self, pos: npt.NDArray[Any]) -> None:
+    def _set_obj_xyz(self, pos):
         qpos = self.data.qpos.flat.copy()
         qvel = self.data.qvel.flat.copy()
         qpos[16:18] = pos.copy()
         qvel[16:18] = 0
         self.set_state(qpos, qvel)
 
-    def reset_model(self) -> npt.NDArray[np.float64]:
+    def reset_model(self):
         self._reset_hand()
         self.obj_init_pos = np.array([0.2, 0.69, 0.04])
         self.obj_init_qpos = np.array([0.0, 0.09])
@@ -151,46 +141,39 @@ class SawyerStickPullEnvV2(SawyerXYZEnv):
         goal_pos = self._get_state_rand_vec()
         while np.linalg.norm(goal_pos[:2] - goal_pos[-3:-1]) < 0.1:
             goal_pos = self._get_state_rand_vec()
-        self.stick_init_pos = np.concatenate([goal_pos[:2], [self.stick_init_pos[-1]]])
-        self._target_pos = np.concatenate([goal_pos[-3:-1], [self.stick_init_pos[-1]]])
+        self.stick_init_pos = np.concatenate((goal_pos[:2], [self.stick_init_pos[-1]]))
+        self._target_pos = np.concatenate((goal_pos[-3:-1], [self.stick_init_pos[-1]]))
 
         self._set_stick_xyz(self.stick_init_pos)
         self._set_obj_xyz(self.obj_init_qpos)
         self.obj_init_pos = self.get_body_com("object").copy()
 
-        self.model.site("goal").pos = self._target_pos
-
         return self._get_obs()
 
-    def _stick_is_inserted(
-        self, handle: npt.NDArray[Any], end_of_stick: npt.NDArray[Any]
-    ) -> bool:
+    def _stick_is_inserted(self, handle, end_of_stick):
         return (
             (end_of_stick[0] >= handle[0])
             and (np.abs(end_of_stick[1] - handle[1]) <= 0.040)
             and (np.abs(end_of_stick[2] - handle[2]) <= 0.060)
         )
 
-    def compute_reward(
-        self, action: npt.NDArray[Any], obs: npt.NDArray[np.float64]
-    ) -> tuple[float, float, float, float, float, float]:
-        assert self._target_pos is not None and self.obj_init_pos is not None
-        _TARGET_RADIUS: float = 0.05
+    def compute_reward(self, action, obs):
+        _TARGET_RADIUS = 0.05
         tcp = self.tcp_center
         stick = obs[4:7]
         end_of_stick = self._get_site_pos("stick_end")
         container = obs[11:14] + np.array([0.05, 0.0, 0.0])
         container_init_pos = self.obj_init_pos + np.array([0.05, 0.0, 0.0])
         handle = obs[11:14]
-        tcp_opened: float = obs[3]
+        tcp_opened = obs[3]
         target = self._target_pos
-        tcp_to_stick = float(np.linalg.norm(stick - tcp))
-        handle_to_target = float(np.linalg.norm(handle - target))
+        tcp_to_stick = np.linalg.norm(stick - tcp)
+        handle_to_target = np.linalg.norm(handle - target)
 
         yz_scaling = np.array([1.0, 1.0, 2.0])
-        stick_to_container = float(np.linalg.norm((stick - container) * yz_scaling))
-        stick_in_place_margin = float(
-            np.linalg.norm((self.stick_init_pos - container_init_pos) * yz_scaling)
+        stick_to_container = np.linalg.norm((stick - container) * yz_scaling)
+        stick_in_place_margin = np.linalg.norm(
+            (self.stick_init_pos - container_init_pos) * yz_scaling
         )
         stick_in_place = reward_utils.tolerance(
             stick_to_container,
@@ -199,8 +182,8 @@ class SawyerStickPullEnvV2(SawyerXYZEnv):
             sigmoid="long_tail",
         )
 
-        stick_to_target = float(np.linalg.norm(stick - target))
-        stick_in_place_margin_2 = float(np.linalg.norm(self.stick_init_pos - target))
+        stick_to_target = np.linalg.norm(stick - target)
+        stick_in_place_margin_2 = np.linalg.norm(self.stick_init_pos - target)
         stick_in_place_2 = reward_utils.tolerance(
             stick_to_target,
             bounds=(0, _TARGET_RADIUS),
@@ -208,8 +191,8 @@ class SawyerStickPullEnvV2(SawyerXYZEnv):
             sigmoid="long_tail",
         )
 
-        container_to_target = float(np.linalg.norm(container - target))
-        container_in_place_margin = float(np.linalg.norm(self.obj_init_pos - target))
+        container_to_target = np.linalg.norm(container - target)
+        container_in_place_margin = np.linalg.norm(self.obj_init_pos - target)
         container_in_place = reward_utils.tolerance(
             container_to_target,
             bounds=(0, _TARGET_RADIUS),
@@ -254,11 +237,31 @@ class SawyerStickPullEnvV2(SawyerXYZEnv):
                 if handle_to_target <= 0.12:
                     reward = 10.0
 
-        return (
+        return [
             reward,
             tcp_to_stick,
             tcp_opened,
             handle_to_target,
             object_grasped,
             stick_in_place,
-        )
+        ]
+
+
+class TrainStickPullv2(SawyerStickPullEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerStickPullEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)
+
+
+class TestStickPullv2(SawyerStickPullEnvV2):
+    tasks = None
+
+    def __init__(self):
+        SawyerStickPullEnvV2.__init__(self, self.tasks)
+
+    def reset(self, seed=None, options=None):
+        return super().reset(seed=seed, options=options)

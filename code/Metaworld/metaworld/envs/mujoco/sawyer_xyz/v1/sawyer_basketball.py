@@ -2,7 +2,10 @@ import numpy as np
 from gymnasium.spaces import Box
 
 from metaworld.envs.asset_path_utils import full_v1_path_for
-from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import SawyerXYZEnv
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import (
+    SawyerXYZEnv,
+    _assert_task_is_set,
+)
 
 
 class SawyerBasketballEnv(SawyerXYZEnv):
@@ -36,19 +39,17 @@ class SawyerBasketballEnv(SawyerXYZEnv):
         self._random_reset_space = Box(
             np.hstack((obj_low, goal_low)),
             np.hstack((obj_high, goal_high)),
-            dtype=np.float64,
         )
         self.goal_space = Box(
             np.array(goal_low) + np.array([0, -0.05001, 0.1000]),
             np.array(goal_high) + np.array([0, -0.05000, 0.1001]),
-            dtype=np.float64,
         )
 
     @property
     def model_name(self):
         return full_v1_path_for("sawyer_xyz/sawyer_basketball.xml")
 
-    @SawyerXYZEnv._Decorators.assert_task_is_set
+    @_assert_task_is_set
     def step(self, action):
         ob = super().step(action)
         reward, reachDist, pickRew, placingDist = self.compute_reward(action, ob)

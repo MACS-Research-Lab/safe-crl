@@ -1,9 +1,4 @@
-from __future__ import annotations
-
-from typing import Any
-
 import numpy as np
-import numpy.typing as npt
 
 from metaworld.policies.action import Action
 from metaworld.policies.policy import Policy, assert_fully_parsed, move
@@ -12,7 +7,7 @@ from metaworld.policies.policy import Policy, assert_fully_parsed, move
 class SawyerStickPushV2Policy(Policy):
     @staticmethod
     @assert_fully_parsed
-    def _parse_obs(obs: npt.NDArray[np.float64]) -> dict[str, npt.NDArray[np.float64]]:
+    def _parse_obs(obs):
         return {
             "hand_pos": obs[:3],
             "unused_1": obs[3],
@@ -23,20 +18,20 @@ class SawyerStickPushV2Policy(Policy):
             "goal_pos": obs[-3:],
         }
 
-    def get_action(self, obs: npt.NDArray[np.float64]) -> npt.NDArray[np.float32]:
+    def get_action(self, obs):
         o_d = self._parse_obs(obs)
 
         action = Action({"delta_pos": np.arange(3), "grab_pow": 3})
 
         action["delta_pos"] = move(
-            o_d["hand_pos"], to_xyz=self._desired_pos(o_d), p=10.0
+            o_d["hand_pos"], to_xyz=self._desired_xyz(o_d), p=10.0
         )
-        action["grab_pow"] = self._grab_effort(o_d)
+        action["grab_pow"] = self._grab_pow(o_d)
 
         return action.array
 
     @staticmethod
-    def _desired_pos(o_d: dict[str, npt.NDArray[np.float64]]) -> npt.NDArray[Any]:
+    def _desired_xyz(o_d):
         hand_pos = o_d["hand_pos"]
         stick_pos = o_d["stick_pos"] + np.array([0.015, 0.0, 0.03])
         thermos_pos = o_d["obj_pos"]
@@ -57,7 +52,7 @@ class SawyerStickPushV2Policy(Policy):
             return goal_pos
 
     @staticmethod
-    def _grab_effort(o_d: dict[str, npt.NDArray[np.float64]]) -> float:
+    def _grab_pow(o_d):
         hand_pos = o_d["hand_pos"]
         stick_pos = o_d["stick_pos"] + np.array([0.015, 0.0, 0.03])
 
