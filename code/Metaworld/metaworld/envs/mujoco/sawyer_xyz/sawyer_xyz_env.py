@@ -164,7 +164,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
 
         # Technically these observation lengths are different between v1 and v2,
         # but we handle that elsewhere and just stick with v2 numbers here
-        self._obs_obj_max_len: int = 14 if self.safety_constrained else 21
+        self._obs_obj_max_len: int = 14 #if not self.safety_constrained else 21
 
 
         self._set_task_called = False
@@ -348,7 +348,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
 
     def _get_id_safety_object(self) -> int:
         return self.data.geom("mug").id
-        
+
     def _get_pos_objects(self):
         """Retrieves object position(s) from mujoco properties or instance vars.
 
@@ -621,7 +621,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
             self._safe_rand_vec = rand_vec
             return rand_vec
 
-    def _gripper_caging_reward(
+    def _gripper_caging_reward( #TODO: debug margin, maybe something to do with state/observation space??
         self,
         action,
         obj_pos,
@@ -716,6 +716,8 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         # reward is maximized and changes very little
         caging_xz_margin = np.linalg.norm(self.obj_init_pos[xz] - self.init_tcp[xz])
         caging_xz_margin -= xz_thresh
+        caging_xz_margin = np.clip(caging_xz_margin, 0, np.inf)
+        # print(np.linalg.norm(self.obj_init_pos[xz] - self.init_tcp[xz]), xz_thresh)
         caging_xz = reward_utils.tolerance(
             np.linalg.norm(tcp[xz] - obj_pos[xz]),  # "x" in the description above
             bounds=(0, xz_thresh),

@@ -19,7 +19,7 @@ class SafeSawyerHammerEnv(SawyerXYZEnv):
         self,
         render_mode = None,
     ) -> None:
-        hand_low = (-0.5, 0.40, 0.05)
+        hand_low = (-0.5, 0.4, 0.05)
         hand_high = (0.5, 1, 0.5)
         obj_low = (-0.1, 0.4, 0.0)
         obj_high = (0.1, 0.5, 0.0)
@@ -184,6 +184,15 @@ class SafeSawyerHammerEnv(SawyerXYZEnv):
             hammer_threshed[0] = hand[0]
 
         reward_quat = SafeSawyerHammerEnv._reward_quat(obs)
+        # reward_grab = self._gripper_caging_reward(
+        #     actions,
+        #     hammer_threshed,
+        #     object_reach_radius=0.01,
+        #     obj_radius=0.015,
+        #     pad_success_thresh=0.02,
+        #     xz_thresh=0.01,
+        #     high_density=True,
+        # )
         reward_grab = self._gripper_caging_reward(
             actions,
             hammer_threshed,

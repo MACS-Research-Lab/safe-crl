@@ -1,7 +1,7 @@
 """Continual World environment with a safety constraint on not spilling a mug."""
 
 from gymnasium import Env
-# import metaworld
+import metaworld
 import numpy as np
 import random
 
@@ -30,14 +30,16 @@ class SafetyContinualWorldEnv(Env):
         self.task_nums = TASK_NUMS
 
         self.change_task()
+        self.action_space = self.env.action_space
+        self.observation_space = self.env.sawyer_observation_space
 
     def step(self, action):
         state, reward, terminated, truncated, info = self.env.step(action)
         cost = info['unscaled_cost']
-        return observation, reward, cost, terminated, truncated, info
+        return state, reward, cost, terminated, truncated, info
 
-    def reset(self):
-        return self.env.reset()
+    def reset(self, seed=None, options=None):
+        return self.env.reset(seed, options)
     
     def check_task(self):
         if self.steps_since_change > TASK_LENGTH:
@@ -55,6 +57,7 @@ class SafetyContinualWorldEnv(Env):
 
         env.set_task(task)  
         env._partially_observable = False
+        env._freeze_rand_vec = False
         self.env = env
 
         self.reset()
