@@ -232,6 +232,7 @@ class SafeSawyerPushBackEnv(SawyerXYZEnv):
         tcp_obj_x_z_margin = (
             np.linalg.norm(init_obj_x_z - init_tcp_x_z, ord=2) - x_z_success_margin
         )
+        tcp_obj_x_z_margin = np.clip(tcp_obj_x_z_margin, 0, np.inf)
         x_z_caging = reward_utils.tolerance(
             float(tcp_obj_norm_x_z),
             bounds=(0, x_z_success_margin),
