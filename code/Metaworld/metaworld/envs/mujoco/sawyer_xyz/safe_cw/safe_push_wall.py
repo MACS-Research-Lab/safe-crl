@@ -242,4 +242,16 @@ class SafeSawyerPushWallEnv(SawyerXYZEnv):
         mug_quat = obs[21:25]
         mug_euler = rotation.quat2euler(mug_quat)
         tilt = np.sqrt(mug_euler[0]**2 + mug_euler[1]**2)
-        return np.floor(np.rad2deg(tilt)) # is this a suitable cost function?
+        self.mug_tilt = tilt
+        if self.tipped_mug():
+            return 1000
+        return np.floor(np.rad2deg(tilt)) 
+
+    def tipped_mug(self):
+        return self.mug_tilt >= 90
+
+    def step(self, action):
+        obs, rew, terminated, trunc, info = super().step(action)
+        if self.tipped_mug():
+            terminated = True
+        return obs, rew, terminated, trunc, info

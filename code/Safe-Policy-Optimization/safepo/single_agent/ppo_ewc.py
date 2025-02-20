@@ -147,6 +147,7 @@ def main(args, cfg_env=None):
         seed=str(args.seed),
     )
     rew_deque = deque(maxlen=20)
+    success_deque = deque(maxlen=20)
     cost_deque = deque(maxlen=20)
     len_deque = deque(maxlen=20)
     eval_rew_deque = deque(maxlen=20)
@@ -157,7 +158,8 @@ def main(args, cfg_env=None):
     logger.log("Start with training.")
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
-    ep_ret, ep_cost, ep_len = (
+    ep_ret, ep_cost, ep_len, ep_success = (
+        np.zeros(args.num_envs),
         np.zeros(args.num_envs),
         np.zeros(args.num_envs),
         np.zeros(args.num_envs),
@@ -173,6 +175,8 @@ def main(args, cfg_env=None):
             next_obs, reward, cost, terminated, truncated, info = env.step(action)
 
             ep_ret += reward.cpu().numpy() if args.task in isaac_gym_map.keys() else reward
+            if 'success' in info and int(info['success']) == 1 and terminated:
+                ep_success += 1
             ep_cost += cost.cpu().numpy() if args.task in isaac_gym_map.keys() else cost
             ep_len += 1
             next_obs, reward, cost, terminated, truncated = (
@@ -224,16 +228,19 @@ def main(args, cfg_env=None):
                         rew_deque.append(ep_ret[idx])
                         cost_deque.append(ep_cost[idx])
                         len_deque.append(ep_len[idx])
+                        success_deque.append(ep_success[idx])
                         logger.store(
                             **{
                                 "Metrics/EpRet": np.mean(rew_deque),
                                 "Metrics/EpCost": np.mean(cost_deque),
                                 "Metrics/EpLen": np.mean(len_deque),
+                                "Metrics/EpSuccess": np.mean(success_deque)
                             }
                         )
                         ep_ret[idx] = 0.0
                         ep_cost[idx] = 0.0
                         ep_len[idx] = 0.0
+                        ep_success[idx] = 0.0
                         logger.logged = False
 
                     buffer.finish_path(
@@ -371,6 +378,7 @@ def main(args, cfg_env=None):
             logger.log_tabular("Metrics/EpRet")
             logger.log_tabular("Metrics/EpCost")
             logger.log_tabular("Metrics/EpLen")
+            logger.log_tabular("Metrics/EpSuccess")
             if args.use_eval:
                 logger.log_tabular("Metrics/EvalEpRet")
                 logger.log_tabular("Metrics/EvalEpCost")

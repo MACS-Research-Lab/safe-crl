@@ -17,7 +17,7 @@ TASK_NUMS = {
     'stick-pull': 4
 }
 
-TASK_LENGTH = 1_000_000 / 10 # divide by number of parallel processes
+TASK_LENGTH = 1_000_000 / 1 # divide by number of parallel processes
 
 class SafetyContinualWorldEnv(Env):
     """HalfCheetah environment with a safety constraint on velocity."""
@@ -36,6 +36,12 @@ class SafetyContinualWorldEnv(Env):
     def step(self, action):
         state, reward, terminated, truncated, info = self.env.step(action)
         cost = info['unscaled_cost']
+
+        self.steps_since_change += 1
+        self.check_task()
+
+        if not terminated:
+            terminated = int(info['success']) == 1
         return state, reward, cost, terminated, truncated, info
 
     def reset(self, seed=None, options=None):
