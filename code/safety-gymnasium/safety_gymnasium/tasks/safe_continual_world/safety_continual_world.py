@@ -17,12 +17,12 @@ TASK_NUMS = {
     'stick-pull': 4
 }
 
-TASK_LENGTH = 1_000_000 / 1 # divide by number of parallel processes
-
 class SafetyContinualWorldEnv(Env):
     """HalfCheetah environment with a safety constraint on velocity."""
 
     def __init__(self, **kwargs) -> None:
+        self.TASK_LENGTH = 1_000_000 / 1 # divide by number of parallel processes
+
         self.current_task = 0
         self.steps_since_change = 0
         self.current_task_name = TASK_CYCLE[self.current_task]
@@ -48,7 +48,7 @@ class SafetyContinualWorldEnv(Env):
         return self.env.reset(seed, options)
     
     def check_task(self):
-        if self.steps_since_change > TASK_LENGTH:
+        if self.steps_since_change > self.TASK_LENGTH:
             self.steps_since_change = 0
             self.current_task = (self.current_task + 1) % len(TASK_CYCLE)
             self.change_task()
