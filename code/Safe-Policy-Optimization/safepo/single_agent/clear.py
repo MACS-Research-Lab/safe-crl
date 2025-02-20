@@ -46,6 +46,41 @@ from safepo.common.model import ActorVCritic
 from safepo.utils.config import single_agent_args, isaac_gym_map, parse_sim_params
 
 
+class ReservoirReplayBuffer:
+    def __init__(self, buffer_size):
+        self.buffer_size = buffer_size
+        self.buffer = []
+        self.count = 0
+
+    def add(self, experience):
+        if len(self.buffer) < self.buffer_size:
+            self.buffer.append(experience)
+        else:
+            # Reservoir sampling algorithm
+            idx = random.randint(0, self.count)
+            if idx < self.buffer_size:
+                self.buffer[idx] = experience
+        self.count += 1
+
+    def sample(self, batch_size):
+        return random.sample(self.buffer, batch_size)
+
+    # Assumes experiences are a list of dicts, converts to a dict of tensors
+    def sample_tensors(self, batch_size):
+        random_experiences = self.sample(batch_size)
+        data_replayed = random_experiences[0].keys()
+        combined_dicts = {key: [] for key in data_replayed}
+
+        for d in random_experiences:
+            for key in data_replayed:
+                combined_dicts[key].append(d[key])
+
+        for key in data_replayed:
+            combined_dicts[key] = torch.stack(combined_dicts[key])
+
+        return combined_dicts
+        
+
 default_cfg = {
     'hidden_sizes': [64, 64],
     'gamma': 0.99,
@@ -130,6 +165,12 @@ def main(args, cfg_env=None):
         gamma=config["gamma"],
     )
 
+    # In CLEAR paper this is the smallest that they consider
+    replay_size = 5_000_000
+    # Buffer to store past experiences
+    # Significantly larger than the buffer above used to store the epoch data
+    replay_buffer = ReservoirReplayBuffer(replay_size)
+
     # set up the logger
     dict_args = vars(args)
     dict_args.update(config)
@@ -196,6 +237,7 @@ def main(args, cfg_env=None):
                 log_prob=log_prob,
             )
 
+            prev_obs = obs.clone()
             obs = next_obs
             epoch_end = steps >= local_steps_per_epoch - 1
             for idx, (done, time_out) in enumerate(zip(terminated, truncated)):
@@ -237,6 +279,24 @@ def main(args, cfg_env=None):
                     buffer.finish_path(
                         last_value_r=last_value_r, last_value_c=last_value_c, idx=idx
                     )
+
+                    tmp_data = buffer.get()
+                    for i in range(len(tmp_data['obs'])):
+                        replay_buffer.add(
+                            {
+                                'obs': tmp_data['obs'][i],
+                                'act': tmp_data['act'][i],
+                                'reward': tmp_data['reward'][i],
+                                'cost': tmp_data['cost'][i],
+                                'value_r': tmp_data['value_r'][i],
+                                'value_c': tmp_data['value_c'][i],
+                                'log_prob': tmp_data['log_prob'][i],
+                                'target_value_r': tmp_data['target_value_r'][i],
+                                'target_value_c': tmp_data['target_value_c'][i],
+                                'adv_r': tmp_data['adv_r'][i]
+                            }
+                    )
+
         rollout_end_time = time.time()
 
         eval_start_time = time.time()
@@ -280,8 +340,10 @@ def main(args, cfg_env=None):
         data = buffer.get()
         old_distribution = policy.actor(data["obs"])
 
-        # comnpute advantage
+        # compute advantage
         advantage = data["adv_r"]
+
+        replayed_data = replay_buffer.sample_tensors(local_steps_per_epoch)
 
         dataloader = DataLoader(
             dataset=TensorDataset(
@@ -291,6 +353,12 @@ def main(args, cfg_env=None):
                 data["target_value_r"],
                 data["target_value_c"],
                 advantage,
+                replayed_data["obs"],
+                replayed_data["act"],
+                replayed_data["log_prob"],
+                replayed_data["target_value_r"],
+                replayed_data["target_value_c"],
+                replayed_data["adv_r"],
             ),
             batch_size=config.get("batch_size", args.steps_per_epoch//config.get("num_mini_batch", 1)),
             shuffle=True,
@@ -305,7 +373,22 @@ def main(args, cfg_env=None):
                 target_value_r_b,
                 target_value_c_b,
                 adv_b,
+                replay_obs,
+                replay_act,
+                replay_log_prob,
+                replay_target_value_r,
+                replay_target_value_c,
+                replay_adv
             ) in dataloader:
+                # Concatenate current and replay batches
+                # CLEAR recommends a 50/50 split past vs current data so this works nicely
+                obs_b = torch.cat([obs_b, replay_obs], dim=0)
+                act_b = torch.cat([act_b, replay_act], dim=0)
+                log_prob_b = torch.cat([log_prob_b, replay_log_prob], dim=0)
+                target_value_r_b = torch.cat([target_value_r_b, replay_target_value_r], dim=0)
+                target_value_c_b = torch.cat([target_value_c_b, replay_target_value_c], dim=0)
+                adv_b = torch.cat([adv_b, replay_adv], dim=0)
+
                 reward_critic_optimizer.zero_grad()
                 loss_r = nn.functional.mse_loss(policy.reward_critic(obs_b), target_value_r_b)
                 cost_critic_optimizer.zero_grad()
@@ -324,6 +407,21 @@ def main(args, cfg_env=None):
                 total_loss = loss_pi + 2*loss_r + loss_c \
                     if config.get("use_value_coefficient", False) \
                     else loss_pi + loss_r + loss_c
+
+                # Policy cloning loss from CLEAR, KL divergence
+                replay_distribution = policy.actor(replay_obs)
+                replay_log_prob_new = replay_distribution.log_prob(replay_act).sum(dim=-1)
+                policy_cloning_loss = torch.mean(replay_log_prob - replay_log_prob_new)
+                
+                # Value cloning loss for reward critic from CLEAR
+                replay_value_r = policy.reward_critic(replay_obs)
+                value_cloning_loss_r = nn.functional.mse_loss(replay_value_r, replay_target_value_r)
+                
+                # Value cloning loss for cost critic (unused but maybe helpful in developing new techniques?)
+                # replay_value_c = policy.cost_critic(replay_obs)
+                # value_cloning_loss_c = nn.functional.mse_loss(replay_value_c, replay_target_value_c)
+
+                # total_loss += policy_cloning_loss + value_cloning_loss_r
                 total_loss.backward()
                 clip_grad_norm_(policy.parameters(), config["max_grad_norm"])
                 reward_critic_optimizer.step()

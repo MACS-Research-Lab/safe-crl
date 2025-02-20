@@ -28,7 +28,7 @@ TASK_NUMS = {
     'front': 2
 }
 
-TASK_LENGTH = 1_000_000 / 10 # divide by number of parallel processes
+TASK_LENGTH = 1_000_000 #/ 10 # divide by number of parallel processes
 # TASK_LENGTH = 40_000 / 10 # divide by number of parallel processes
 # TASK_LENGTH = 250 / 10 # divide by number of parallel processes
 NOMINAL_FRONT_FOOT = np.array([0.046, 0.07,  0.   ])

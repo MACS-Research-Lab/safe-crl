@@ -132,6 +132,10 @@ class VectorizedOnPolicyBuffer:
             lam=self._lam_c,
             gamma=self._gamma,
         )
+
+        self.target_value_r = target_value_r
+        self.target_value_c = target_value_c
+
         self.buffers[idx]["adv_r"][path_slice] = adv_r
         self.buffers[idx]["adv_c"][path_slice] = adv_c
         self.buffers[idx]["target_value_r"][path_slice] = target_value_r

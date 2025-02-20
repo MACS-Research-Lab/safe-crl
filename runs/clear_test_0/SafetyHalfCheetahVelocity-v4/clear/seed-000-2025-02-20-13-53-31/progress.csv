@@ -1,0 +1,2 @@
+Metrics/EpRet,Metrics/EpCost,Metrics/EpLen,Metrics/EpSuccess,Train/Epoch,Train/TotalSteps,Train/StopIter,Train/KL,Train/LR,Loss/Loss_reward_critic,Loss/Loss_cost_critic,Loss/Loss_actor,Time/Rollout,Time/Update,Time/Total,Value/RewardAdv,Value/CostAdv
+-665.5196389733583,0.0,1000.0,0.0,1,20000,40,0.016611790284514427,0.00029925,2.1522520770321782,0.0022618861759001333,0.18532300953354253,20.35558271408081,68.31984066963196,88.67542624473572,1.3732909920349812e-08,-1.192092865393013e-11

@@ -9,7 +9,8 @@ import multiprocessing
 # Uses saved configs to ease reproducibility
 
 # Define constants
-SEEDS = ['0', '1', '2', '3', '4']
+# SEEDS = ['0', '1', '2', '3', '4']
+SEEDS = ['0']
 
 def run_script(algorithm, arguments):
     command = ['python', f'./Safe-Policy-Optimization/safepo/single_agent/{algorithm}.py'] + arguments
@@ -28,7 +29,7 @@ if __name__ == "__main__":
 
     for seed in SEEDS:
         if args.task == 'cheetah':
-            env_name = 'SafetyHalfCheetah-v4'
+            env_name = 'SafetyHalfCheetahVelocity-v4'
             task_list = '[0, 1, 0, 2, 1, 0, 2]'
             total_steps = '8_000_000'
         elif args.task == 'cw':
@@ -43,7 +44,8 @@ if __name__ == "__main__":
                      '--tasks', task_list,
                      '--total-steps', total_steps,
                      '--experiment', f'{args.name}_{seed}',
-                     '--num-envs', '1']
+                     '--num-envs', '1',
+                     '--device', 'cpu']
         
         algorithm = args.alg
 
