@@ -14,13 +14,11 @@ SEEDS = ['0']
 
 def run_script(algorithm, arguments):
     command = ['python', f'./Safe-Policy-Optimization/safepo/single_agent/{algorithm}.py'] + arguments
-    # result = subprocess.run(command, capture_output=True, text=True)
     result = subprocess.run(command)
-    # print(f"Output for seed {seed}:\n{result.stdout}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--alg', type=str, help="Choose from 'cpo', 'ppo_lag', 'cppo_pid', 'ppo_ewc', 'ppo_ewc_cost'")
+    parser.add_argument('--alg', type=str, help="Choose from 'cpo', 'ppo_lag', 'cppo_pid', 'ppo_ewc', 'ppo_ewc_cost', 'clear")
     parser.add_argument('--task', type=str, help="Choose from 'cheetah' or 'cw'")
     parser.add_argument('--name', type=str, help="Experiment name to prepend results file")
 

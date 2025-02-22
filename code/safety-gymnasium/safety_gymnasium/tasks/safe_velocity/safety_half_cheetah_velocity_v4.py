@@ -28,7 +28,6 @@ TASK_NUMS = {
     'front': 2
 }
 
-TASK_LENGTH = 1_000_000 #/ 10 # divide by number of parallel processes
 # TASK_LENGTH = 40_000 / 10 # divide by number of parallel processes
 # TASK_LENGTH = 250 / 10 # divide by number of parallel processes
 NOMINAL_FRONT_FOOT = np.array([0.046, 0.07,  0.   ])
@@ -61,6 +60,7 @@ class SafetyHalfCheetahVelocityEnv(HalfCheetahEnv):
     """HalfCheetah environment with a safety constraint on velocity."""
 
     def __init__(self, **kwargs) -> None:
+        self.TASK_LENGTH = 1_000_000 #/ 10 # divide by number of parallel processes
         self.current_task = 0
         self.steps_since_change = 0
         self.current_task_name = TASK_CYCLE[self.current_task]
@@ -109,7 +109,7 @@ class SafetyHalfCheetahVelocityEnv(HalfCheetahEnv):
         return observation, reward, cost, terminated, False, info
     
     def check_task(self):
-        if self.steps_since_change > TASK_LENGTH:
+        if self.steps_since_change > self.TASK_LENGTH:
             self.steps_since_change = 0
             self.current_task = (self.current_task + 1) % len(TASK_CYCLE)
             self.change_task()

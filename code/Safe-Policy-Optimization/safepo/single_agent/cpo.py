@@ -33,6 +33,7 @@ import torch.nn as nn
 import torch.optim
 from torch.nn.utils.clip_grad import clip_grad_norm_
 from torch.utils.data import DataLoader, TensorDataset
+import optuna
 
 from safepo.common.buffer import VectorizedOnPolicyBuffer
 from safepo.common.env import make_sa_mujoco_env, make_sa_isaac_env
@@ -66,6 +67,22 @@ isaac_gym_specific_cfg = {
     'use_critic_norm': False,
 }
 
+def get_hyperparameters(config, task):
+    if task == 'SafetyHalfCheetahVelocity-v4':
+        env_name = 'cheetah'
+    elif task == 'SafetyContinualWorld':
+        env_name = 'cw'
+    else:
+        return config
+    
+    study = optuna.load_study(study_name=f'cpo_{env_name}', storage=f'../../hyperparams/cpo_{env_name}.db')
+    hyperparams = study.best_params
+    config['hidden_sizes'][0] = hyperparams['neurons']
+    config['hidden_sizes'][1] = hyperparams['neurons']
+    config['batch_size'] = hyperparams['batch_size']
+    config['step_fraction'] = hyperparams['step_fraction']
+
+    return config
 
 def get_flat_params_from(model: torch.nn.Module) -> torch.Tensor:
     flat_params = []
@@ -172,8 +189,9 @@ def main(args, cfg_env=None):
             num_envs=args.num_envs, env_id=args.task, seed=args.seed
         )
         eval_env, _, _ = make_sa_mujoco_env(num_envs=1, env_id=args.task, seed=None)
-        config = default_cfg
-
+        config = get_hyperparameters(default_cfg, args.task)
+        if 'step_fraction' in config.keys():
+            STEP_FRACTION=config['step_fraction']
     else:
         sim_params = parse_sim_params(args, cfg_env, None)
         env = make_sa_isaac_env(args=args, cfg=cfg_env, sim_params=sim_params)

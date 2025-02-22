@@ -18,6 +18,11 @@ import torch.optim
 from torch.nn.utils.clip_grad import clip_grad_norm_
 from torch.utils.data import DataLoader, TensorDataset
 
+from torch.optim.lr_scheduler import LinearLR
+from safepo.common.lagrange import PIDLagrangian as Lagrange
+from safepo.common.lagrange import Lagrange as LagLagrange
+
+
 from safepo.common.buffer import VectorizedOnPolicyBuffer
 from safepo.common.env import make_sa_mujoco_env, make_sa_isaac_env
 from safepo.common.logger import EpochLogger
@@ -33,6 +38,9 @@ def train_cpo(hyperparams, task):
     
     CPO_SEARCHING_STEPS=15
     CONJUGATE_GRADIENT_ITERS=15
+
+    torch.backends.cudnn.deterministic = True
+    torch.set_num_threads(4)
 
     default_cfg = {
         'hidden_sizes': [64, 64],
@@ -179,6 +187,9 @@ def train_cpo(hyperparams, task):
         gamma=config["gamma"],
     )
 
+    if task=='SafetyContinualWorld':
+        env.current_task = 2
+        env.change_task()
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
     ep_ret, ep_cost, ep_len, ep_success = (
@@ -444,7 +455,7 @@ def train_cpo(hyperparams, task):
                 reward_critic_optimizer.step()
                 cost_critic_optimizer.step()
 
-    return policy.actor
+    return policy
 
 def train_cppo(hyperparams, task):
     
@@ -470,6 +481,8 @@ def train_cppo(hyperparams, task):
     random.seed(args['seed'])
     np.random.seed(args['seed'])
     torch.manual_seed(args['seed'])
+    torch.backends.cudnn.deterministic = True
+    torch.set_num_threads(4)
 
     env, obs_space, act_space = make_sa_mujoco_env(
         num_envs=1, env_id=task, seed=args['seed']
@@ -517,6 +530,9 @@ def train_cppo(hyperparams, task):
         lagrangian_multiplier_init=0.001, # should this be a hyperparameter?
     )
 
+    if task=='SafetyContinualWorld':
+        env.current_task = 2
+        env.change_task()
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
     ep_ret, ep_cost, ep_len, ep_success = (
@@ -673,7 +689,7 @@ def train_cppo(hyperparams, task):
         update_end_time = time.time()
         actor_scheduler.step()
 
-    return policy.actor
+    return policy
 
 def train_ppo_lag(hyperparams, task):
     default_cfg = {
@@ -694,6 +710,8 @@ def train_ppo_lag(hyperparams, task):
     random.seed(args['seed'])
     np.random.seed(args['seed'])
     torch.manual_seed(args['seed'])
+    torch.backends.cudnn.deterministic = True
+    torch.set_num_threads(4)
 
     env, obs_space, act_space = make_sa_mujoco_env(
         num_envs=1, env_id=args['task'], seed=args['seed']
@@ -737,12 +755,15 @@ def train_ppo_lag(hyperparams, task):
         gamma=config["gamma"],
     )
     # setup lagrangian multiplier
-    lagrange = Lagrange(
+    lagrange = LagLagrange(
         cost_limit=25,
         lagrangian_multiplier_init=0.001, # should this be a hyperparameter?
-        lagrangian_multiplier_lr=0.035,
+        lagrangian_multiplier_lr=config['lagrangian_multiplier_lr'],
     )
 
+    if task=='SafetyContinualWorld':
+        env.current_task = 2
+        env.change_task()
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
     ep_ret, ep_cost, ep_len, ep_success = (
@@ -758,7 +779,7 @@ def train_ppo_lag(hyperparams, task):
         for steps in range(local_steps_per_epoch):
             with torch.no_grad():
                 act, log_prob, value_r, value_c = policy.step(obs, deterministic=False)
-            action = act.detach().squeeze() if args['tasl'] in isaac_gym_map.keys() else act.detach().squeeze().cpu().numpy()
+            action = act.detach().squeeze() if args['task'] in isaac_gym_map.keys() else act.detach().squeeze().cpu().numpy()
             next_obs, reward, cost, terminated, truncated, info = env.step(action)
 
             ep_ret += reward.cpu().numpy() if args['task'] in isaac_gym_map.keys() else reward
@@ -899,7 +920,7 @@ def train_ppo_lag(hyperparams, task):
         update_end_time = time.time()
         actor_scheduler.step()
 
-    return policy.actor
+    return policy
 
 def train_ppo(hyperparams, task):
     default_cfg = {
@@ -920,6 +941,8 @@ def train_ppo(hyperparams, task):
     random.seed(args['seed'])
     np.random.seed(args['seed'])
     torch.manual_seed(args['seed'])
+    torch.backends.cudnn.deterministic = True
+    torch.set_num_threads(4)
 
     env, obs_space, act_space = make_sa_mujoco_env(
         num_envs=1, env_id=args['task'], seed=args['seed']
@@ -963,6 +986,9 @@ def train_ppo(hyperparams, task):
         gamma=config["gamma"],
     )
 
+    if task=='SafetyContinualWorld':
+        env.current_task = 2
+        env.change_task()
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
     ep_ret, ep_cost, ep_len, ep_success = (
@@ -1037,7 +1063,6 @@ def train_ppo(hyperparams, task):
                         ep_cost[idx] = 0.0
                         ep_len[idx] = 0.0
                         ep_success[idx] = 0.0
-                        logger.logged = False
 
                     buffer.finish_path(
                         last_value_r=last_value_r, last_value_c=last_value_c, idx=idx
@@ -1115,9 +1140,31 @@ def train_ppo(hyperparams, task):
         update_end_time = time.time()
         actor_scheduler.step()
 
-    return actor.policy
+    return policy
 
 def train_ppo_ewc(hyperparams, task):
+    def compute_fisher_info(data, policy):
+        fisher_info = {}
+        for obs, act in zip(data['obs'], data['act']):
+            policy.zero_grad()
+            log_prob = policy.actor(obs).log_prob(act).sum()
+            log_prob.backward()
+            for name, param in policy.actor.named_parameters():
+                if name not in fisher_info:
+                    # print(f'param grad requires {param.grad.requires_grad}, is detach {param.grad is None}, grad {param.grad}')
+                    fisher_info[name] = param.grad.clone().pow(2)
+                    # print(f'param grad clone requires {fisher_info[name].requires_grad}, is detach {fisher_info[name] is None}, grad {fisher_info[name].grad}')
+                else:
+                    fisher_info[name] += param.grad.clone().pow(2)
+
+        for name in fisher_info:
+            fisher_info[name] /= len(data['obs'])
+
+        return fisher_info
+
+    def save_old_params(model):
+        return {n: p.clone() for n, p in model.named_parameters()}
+        
     default_cfg = {
         'hidden_sizes': [64, 64],
         'gamma': 0.99,
@@ -1133,8 +1180,14 @@ def train_ppo_ewc(hyperparams, task):
     random.seed(args['seed'])
     np.random.seed(args['seed'])
     torch.manual_seed(args['seed'])
+    torch.backends.cudnn.deterministic = True
+    torch.set_num_threads(4)
 
-    tasks = [0, 1]
+    if task == 'SafetyHalfCheetahVelocity-v4':
+        tasks = [0, 1]
+    elif task == 'SafetyContinualWorld':
+        tasks = [0, 1]
+
     num_tasks = len(tasks)
     # EWC over multiple tasks
     fisher_matrices = [None] * num_tasks
@@ -1188,6 +1241,9 @@ def train_ppo_ewc(hyperparams, task):
         gamma=config["gamma"],
     )
 
+    if task=='SafetyContinualWorld':
+        env.current_task = 2
+        env.change_task()
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
     ep_ret, ep_cost, ep_len, ep_success = (
@@ -1262,7 +1318,6 @@ def train_ppo_ewc(hyperparams, task):
                         ep_cost[idx] = 0.0
                         ep_len[idx] = 0.0
                         ep_success[idx] = 0.0
-                        logger.logged = False
 
                     buffer.finish_path(
                         last_value_r=last_value_r, last_value_c=last_value_c, idx=idx
@@ -1366,27 +1421,5 @@ def train_ppo_ewc(hyperparams, task):
 
             current_task_index = (current_task_index + 1) % num_tasks
             steps_since_change = 0
-
-    def compute_fisher_info(data, policy):
-        fisher_info = {}
-        for obs, act in zip(data['obs'], data['act']):
-            policy.zero_grad()
-            log_prob = policy.actor(obs).log_prob(act).sum()
-            log_prob.backward()
-            for name, param in policy.actor.named_parameters():
-                if name not in fisher_info:
-                    # print(f'param grad requires {param.grad.requires_grad}, is detach {param.grad is None}, grad {param.grad}')
-                    fisher_info[name] = param.grad.clone().pow(2)
-                    # print(f'param grad clone requires {fisher_info[name].requires_grad}, is detach {fisher_info[name] is None}, grad {fisher_info[name].grad}')
-                else:
-                    fisher_info[name] += param.grad.clone().pow(2)
-
-        for name in fisher_info:
-            fisher_info[name] /= len(data['obs'])
-
-        return fisher_info
-
-    def save_old_params(model):
-        return {n: p.clone() for n, p in model.named_parameters()}
         
-    return policy.actor
+    return policy
