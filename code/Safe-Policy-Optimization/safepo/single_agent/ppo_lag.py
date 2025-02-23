@@ -33,6 +33,7 @@ import torch.optim
 from torch.nn.utils.clip_grad import clip_grad_norm_
 from torch.optim.lr_scheduler import LinearLR
 from torch.utils.data import DataLoader, TensorDataset
+import optuna
 
 from safepo.common.buffer import VectorizedOnPolicyBuffer
 from safepo.common.env import make_sa_mujoco_env, make_sa_isaac_env
@@ -64,6 +65,26 @@ isaac_gym_specific_cfg = {
     'use_critic_norm': False,
 }
 
+def get_hyperparameters(config, task):
+    if task == 'SafetyHalfCheetahVelocity-v4':
+        env_name = 'cheetah'
+    elif task == 'SafetyContinualWorld':
+        env_name = 'cw'
+    else:
+        return config
+    
+    
+    db_path = os.path.abspath(f"./hyperparams/ppo_lag_{env_name}.db")
+    study = optuna.load_study(study_name=f'ppo_lag_{env_name}', storage=f'sqlite:///{db_path}')
+    hyperparams = study.best_params
+    config['hidden_sizes'][0] = hyperparams['neurons']
+    config['hidden_sizes'][1] = hyperparams['neurons']
+    config['batch_size'] = hyperparams['batch_size']
+    config['lagrangian_multiplier_lr'] = hyperparams['lagrangian_multiplier_lr']
+
+    return config
+
+
 def main(args, cfg_env=None):
     # set the random seed, device and number of threads
     random.seed(args.seed)
@@ -80,7 +101,8 @@ def main(args, cfg_env=None):
         )
         eval_env, _, _ = make_sa_mujoco_env(num_envs=1, env_id=args.task, seed=None)
         config = default_cfg
-
+        config = get_hyperparameters(default_cfg, args.task)
+    
     else:
         sim_params = parse_sim_params(args, cfg_env, None)
         env = make_sa_isaac_env(args=args, cfg=cfg_env, sim_params=sim_params)
@@ -126,10 +148,14 @@ def main(args, cfg_env=None):
         gamma=config["gamma"],
     )
     # setup lagrangian multiplier
+    if 'lagrangian_multiplier_lr' in config.keys():
+        lag_mult_lr = config['lagrangian_multiplier_lr']
+    else:
+        lag_mult_lr = args.lagrangian_multiplier_lr
     lagrange = Lagrange(
         cost_limit=args.cost_limit,
         lagrangian_multiplier_init=args.lagrangian_multiplier_init,
-        lagrangian_multiplier_lr=args.lagrangian_multiplier_lr,
+        lagrangian_multiplier_lr=lag_mult_lr,
     )
 
     # set up the logger

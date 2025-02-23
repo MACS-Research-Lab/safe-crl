@@ -75,7 +75,9 @@ def get_hyperparameters(config, task):
     else:
         return config
     
-    study = optuna.load_study(study_name=f'cpo_{env_name}', storage=f'../../hyperparams/cpo_{env_name}.db')
+    
+    db_path = os.path.abspath(f"./hyperparams/cpo_{env_name}.db")
+    study = optuna.load_study(study_name=f'cpo_{env_name}', storage=f'sqlite:///{db_path}')
     hyperparams = study.best_params
     config['hidden_sizes'][0] = hyperparams['neurons']
     config['hidden_sizes'][1] = hyperparams['neurons']

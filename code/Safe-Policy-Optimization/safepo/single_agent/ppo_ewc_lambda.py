@@ -36,6 +36,7 @@ import torch.optim
 from torch.nn.utils.clip_grad import clip_grad_norm_
 from torch.optim.lr_scheduler import LinearLR
 from torch.utils.data import DataLoader, TensorDataset
+import optuna
 
 from safepo.common.buffer import VectorizedOnPolicyBuffer
 from safepo.common.env import make_sa_mujoco_env, make_sa_isaac_env
@@ -66,6 +67,26 @@ isaac_gym_specific_cfg = {
     'use_critic_norm': False,
 }
 
+def get_hyperparameters(config, task):
+    if task == 'SafetyHalfCheetahVelocity-v4':
+        env_name = 'cheetah'
+    elif task == 'SafetyContinualWorld':
+        env_name = 'cw'
+    else:
+        return config
+    
+    
+    db_path = os.path.abspath(f"./hyperparams/ppo_ewc_{env_name}.db")
+    study = optuna.load_study(study_name=f'ppo_ewc_{env_name}', storage=f'sqlite:///{db_path}')
+    hyperparams = study.best_params
+    config['hidden_sizes'][0] = hyperparams['neurons']
+    config['hidden_sizes'][1] = hyperparams['neurons']
+    config['batch_size'] = hyperparams['batch_size']
+    config['learning_iters'] = int(hyperparams['learning_iters'])
+    config['lambda'] = hyperparams['lambda']
+
+    return config
+
 def main(args, cfg_env=None):
     # set the random seed, device and number of threads
     random.seed(args.seed)
@@ -80,7 +101,6 @@ def main(args, cfg_env=None):
     # EWC over multiple tasks
     fisher_matrices = [None] * num_tasks
     old_params_list = [None] * num_tasks
-    lambda_ewc = float(args.ewc_lambda)
 
     current_task_index = 0
     steps_since_change = 0
@@ -91,8 +111,9 @@ def main(args, cfg_env=None):
     )
     nominal_env, _, _ = make_sa_mujoco_env(num_envs=1, env_id="SafetyHalfCheetahVelocity-v1", seed=None)
     leg_env, _, _ = make_sa_mujoco_env(num_envs=1, env_id="SafetyHalfCheetahVelocity-v5", seed=None)
-    config = default_cfg
+    config = get_hyperparameters(default_cfg, args.task)
 
+    lambda_ewc = float(args.ewc_lambda)
     # set training steps
     steps_per_epoch = config.get("steps_per_epoch", args.steps_per_epoch)
     total_steps = config.get("total_steps", args.total_steps)

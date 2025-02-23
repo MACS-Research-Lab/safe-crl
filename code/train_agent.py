@@ -9,8 +9,7 @@ import multiprocessing
 # Uses saved configs to ease reproducibility
 
 # Define constants
-# SEEDS = ['0', '1', '2', '3', '4']
-SEEDS = ['0']
+SEEDS = ['0', '1', '2', '3', '4']
 
 def run_script(algorithm, arguments):
     command = ['python', f'./Safe-Policy-Optimization/safepo/single_agent/{algorithm}.py'] + arguments
@@ -46,12 +45,6 @@ if __name__ == "__main__":
                      '--device', 'cpu']
         
         algorithm = args.alg
-
-        # TODO: implement logic for additional arguments
-        if algorithm == 'ppo_ewc':
-            pass
-        elif algorithm == 'ppo_ewc_cost':
-            pass 
 
         process = multiprocessing.Process(target=run_script, args=(algorithm, arguments))
         processes.append(process)
