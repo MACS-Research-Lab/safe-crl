@@ -140,10 +140,11 @@ class VectorizedOnPolicyBuffer:
         self.buffers[idx]["adv_c"][path_slice] = adv_c
         self.buffers[idx]["target_value_r"][path_slice] = target_value_r
         self.buffers[idx]["target_value_c"][path_slice] = target_value_c
+        self.prev_slice = (self.path_start_idx_list[idx], self.ptr_list[idx])
 
         self.path_start_idx_list[idx] = self.ptr_list[idx]
 
-    def get(self) -> dict[str, torch.Tensor]:
+    def get(self, dont_reset=False) -> dict[str, torch.Tensor]:
         """
         Retrieve collected data from the buffer.
 
@@ -162,8 +163,9 @@ class VectorizedOnPolicyBuffer:
             data["adv_r"] = (data["adv_r"] - adv_mean) / (adv_std + 1e-8)
         if self._standardized_adv_c:
             data["adv_c"] = data["adv_c"] - cadv_mean
-        self.ptr_list = [0] * self.num_envs
-        self.path_start_idx_list = [0] * self.num_envs
+        if not dont_reset:
+            self.ptr_list = [0] * self.num_envs
+            self.path_start_idx_list = [0] * self.num_envs
 
         return data
 

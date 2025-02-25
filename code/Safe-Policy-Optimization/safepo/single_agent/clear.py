@@ -257,7 +257,6 @@ def main(args, cfg_env=None):
                 log_prob=log_prob,
             )
 
-            prev_obs = obs.clone()
             obs = next_obs
             epoch_end = steps >= local_steps_per_epoch - 1
             for idx, (done, time_out) in enumerate(zip(terminated, truncated)):
@@ -300,8 +299,9 @@ def main(args, cfg_env=None):
                         last_value_r=last_value_r, last_value_c=last_value_c, idx=idx
                     )
 
-                    tmp_data = buffer.get()
-                    for i in range(len(tmp_data['obs'])):
+                    tmp_data = buffer.get(dont_reset=True)
+                    recent_data_idx = buffer.prev_slice
+                    for i in range(recent_data_idx[0], recent_data_idx[1]):
                         replay_buffer.add(
                             {
                                 'obs': tmp_data['obs'][i],
@@ -429,17 +429,17 @@ def main(args, cfg_env=None):
                     else loss_pi + loss_r + loss_c
 
                 # Policy cloning loss from CLEAR, KL divergence
-                replay_distribution = policy.actor(replay_obs)
-                replay_log_prob_new = replay_distribution.log_prob(replay_act).sum(dim=-1)
-                policy_cloning_loss = torch.mean(replay_log_prob - replay_log_prob_new)
+                # replay_distribution = policy.actor(replay_obs)
+                # replay_log_prob_new = replay_distribution.log_prob(replay_act).sum(dim=-1)
+                # policy_cloning_loss = torch.mean(replay_log_prob - replay_log_prob_new)
                 
-                # Value cloning loss for reward critic from CLEAR
-                replay_value_r = policy.reward_critic(replay_obs)
-                value_cloning_loss_r = nn.functional.mse_loss(replay_value_r, replay_target_value_r)
+                # # Value cloning loss for reward critic from CLEAR
+                # replay_value_r = policy.reward_critic(replay_obs)
+                # value_cloning_loss_r = nn.functional.mse_loss(replay_value_r, replay_target_value_r)
                 
-                # Value cloning loss for cost critic (unused but maybe helpful in developing new techniques?)
-                # replay_value_c = policy.cost_critic(replay_obs)
-                # value_cloning_loss_c = nn.functional.mse_loss(replay_value_c, replay_target_value_c)
+                # # Value cloning loss for cost critic (unused but maybe helpful in developing new techniques?)
+                # # replay_value_c = policy.cost_critic(replay_obs)
+                # # value_cloning_loss_c = nn.functional.mse_loss(replay_value_c, replay_target_value_c)
 
                 # total_loss += policy_cloning_loss + value_cloning_loss_r
                 total_loss.backward()

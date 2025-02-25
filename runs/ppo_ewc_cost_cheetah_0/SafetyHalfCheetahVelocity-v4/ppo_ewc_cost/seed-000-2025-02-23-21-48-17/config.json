@@ -1,0 +1,32 @@
+{
+    "batch_size":	64,
+    "cost_limit":	25.0,
+    "device":	"cpu",
+    "device_id":	0,
+    "ewc_lambda":	1,
+    "exp_name":	"SafetyHalfCheetahVelocity-v4-ppo_ewc_cost-seed-0",
+    "experiment":	"ppo_ewc_cost_cheetah_0",
+    "gamma":	0.99,
+    "headless":	false,
+    "hidden_sizes":	[
+        32,
+        32
+    ],
+    "lagrangian_multiplier_init":	0.001,
+    "lagrangian_multiplier_lr":	0.035,
+    "lambda":	12.926457593148449,
+    "learning_iters":	36,
+    "log_dir":	"../runs/ppo_ewc_cost_cheetah_0/SafetyHalfCheetahVelocity-v4/ppo_ewc_cost/seed-000-2025-02-23-21-48-17",
+    "max_grad_norm":	40.0,
+    "num_envs":	1,
+    "randomize":	false,
+    "seed":	0,
+    "steps_per_epoch":	20000,
+    "target_kl":	0.02,
+    "task":	"SafetyHalfCheetahVelocity-v4",
+    "task_length":	1000000,
+    "tasks":	"[0, 1, 0, 2, 1, 0, 2]",
+    "total_steps":	8000000,
+    "use_eval":	false,
+    "write_terminal":	true
+}
