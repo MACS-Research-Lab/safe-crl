@@ -87,7 +87,7 @@ class SawyerMocapBase(mjenv_gym):
             for i in range(self.model.eq_data.shape[0]):
                 if self.model.eq_type[i] == mujoco.mjtEq.mjEQ_WELD:
                     self.model.eq_data[i] = np.array(
-                        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+                        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 5.0]
                     )
 
 
@@ -262,8 +262,9 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         self.set_state(qpos, qvel)
 
     def _get_site_pos(self, siteName):
-        _id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, siteName)
-        return self.data.site_xpos[_id].copy()
+        # _id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, siteName)
+        # return self.data.site_xpos[_id].copy()
+        return self.data.site(siteName).xpos.copy()
 
     def _set_pos_site(self, name, pos):
         """Sets the position of the site corresponding to `name`.
@@ -275,8 +276,10 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         assert isinstance(pos, np.ndarray)
         assert pos.ndim == 1
 
-        _id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, name)
-        self.data.site_xpos[_id] = pos[:3]
+        # _id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, name)
+        # self.data.site_xpos[_id] = pos[:3]
+
+        self.data.site(name).xpos = pos[:3]
 
     @property
     def _target_site_config(self):
@@ -514,7 +517,6 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
                     "unscaled_reward": 0.0,
                 },
             )
-
         self._last_stable_obs = self._get_obs()
 
         self._last_stable_obs = np.clip(
@@ -568,7 +570,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         for _ in range(steps):
             self.data.mocap_pos[mocap_id][:] = self.hand_init_pos
             self.data.mocap_quat[mocap_id][:] = np.array([1, 0, 1, 0])
-            # self.do_simulation([-1, 1], self.frame_skip)
+            self.do_simulation([-1, 1], self.frame_skip)
         self.init_tcp = self.tcp_center
 
         self.init_tcp = self.tcp_center

@@ -40,6 +40,7 @@ from safepo.common.env import make_sa_mujoco_env, make_sa_isaac_env
 from safepo.common.logger import EpochLogger
 from safepo.common.model import ActorVCritic
 from safepo.utils.config import single_agent_args, isaac_gym_map, parse_sim_params
+import safety_gymnasium
 
 
 default_cfg = {
@@ -73,7 +74,7 @@ def get_hyperparameters(config, task):
     else:
         return config
     
-    
+    env_name = 'cheetah'
     db_path = os.path.abspath(f"./hyperparams/ppo_{env_name}.db")
     study = optuna.load_study(study_name=f'ppo_{env_name}', storage=f'sqlite:///{db_path}')
     hyperparams = study.best_params
@@ -94,7 +95,12 @@ def main(args, cfg_env=None):
     torch.set_num_threads(4)
     device = torch.device(f'{args.device}:{args.device_id}')
 
-
+    # if args.task == 'SafetyContinualWorld':
+    #     env = safety_gymnasium.make(args.task)
+    #     obs_space = env.observation_space
+    #     act_space = env.action_space
+    #     config = get_hyperparameters(default_cfg, args.task)
+    # el
     if args.task not in isaac_gym_map.keys():
         env, obs_space, act_space = make_sa_mujoco_env(
             num_envs=args.num_envs, env_id=args.task, seed=args.seed
@@ -189,7 +195,7 @@ def main(args, cfg_env=None):
             next_obs, reward, cost, terminated, truncated, info = env.step(action)
 
             ep_ret += reward.cpu().numpy() if args.task in isaac_gym_map.keys() else reward
-            if 'success' in info and int(info['success']) == 1 and terminated:
+            if 'success' in info and int(info['success']) == 1:
                 ep_success += 1
             ep_cost += cost.cpu().numpy() if args.task in isaac_gym_map.keys() else cost
             ep_len += 1
@@ -242,7 +248,7 @@ def main(args, cfg_env=None):
                         rew_deque.append(ep_ret[idx])
                         cost_deque.append(ep_cost[idx])
                         len_deque.append(ep_len[idx])
-                        success_deque.append(ep_success[idx])
+                        success_deque.append(int(ep_success[idx] > 0))
                         logger.store(
                             **{
                                 "Metrics/EpRet": np.mean(rew_deque),

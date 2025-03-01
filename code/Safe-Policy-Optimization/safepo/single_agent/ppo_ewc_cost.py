@@ -75,9 +75,9 @@ def get_hyperparameters(config, task):
     else:
         return config
     
-    
-    db_path = os.path.abspath(f"./hyperparams/ppo_ewc_{env_name}.db")
-    study = optuna.load_study(study_name=f'ppo_ewc_{env_name}', storage=f'sqlite:///{db_path}')
+    env_name = 'cheetah'
+    db_path = os.path.abspath(f"./hyperparams/ppo_ewc_cheetah.db")
+    study = optuna.load_study(study_name=f'ppo_ewc_cheetah', storage=f'sqlite:///{db_path}')
     hyperparams = study.best_params
     config['hidden_sizes'][0] = hyperparams['neurons']
     config['hidden_sizes'][1] = hyperparams['neurons']
@@ -201,10 +201,10 @@ def main(args, cfg_env=None):
             action = act.detach().squeeze() if args.task in isaac_gym_map.keys() else act.detach().squeeze().cpu().numpy()
             next_obs, reward, cost, terminated, truncated, info = env.step(action)
 
-            reward -= 5 * cost # subtracting cost here, be sure to add it back when displaying results
+            reward = reward - 5 * cost # subtracting cost here, be sure to add it back when displaying results
 
             ep_ret += reward.cpu().numpy() if args.task in isaac_gym_map.keys() else reward
-            if 'success' in info and int(info['success']) == 1 and terminated:
+            if 'success' in info and int(info['success']) == 1:
                 ep_success += 1
             ep_cost += cost.cpu().numpy() if args.task in isaac_gym_map.keys() else cost
             ep_len += 1
@@ -257,7 +257,7 @@ def main(args, cfg_env=None):
                         rew_deque.append(ep_ret[idx]) # subtracting cost here, make sure to add it back in when demonstrating results
                         cost_deque.append(ep_cost[idx])
                         len_deque.append(ep_len[idx])
-                        success_deque.append(ep_success[idx])
+                        success_deque.append(int(ep_success[idx] > 0))
                         logger.store(
                             **{
                                 "Metrics/EpRet": np.mean(rew_deque),

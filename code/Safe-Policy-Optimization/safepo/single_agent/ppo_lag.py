@@ -73,7 +73,7 @@ def get_hyperparameters(config, task):
     else:
         return config
     
-    
+    env_name = 'cheetah'
     db_path = os.path.abspath(f"./hyperparams/ppo_lag_{env_name}.db")
     study = optuna.load_study(study_name=f'ppo_lag_{env_name}', storage=f'sqlite:///{db_path}')
     hyperparams = study.best_params
@@ -194,7 +194,7 @@ def main(args, cfg_env=None):
             next_obs, reward, cost, terminated, truncated, info = env.step(action)
 
             ep_ret += reward.cpu().numpy() if args.task in isaac_gym_map.keys() else reward
-            if 'success' in info and int(info['success']) == 1 and terminated:
+            if 'success' in info and int(info['success']) == 1:
                 ep_success += 1
             ep_cost += cost.cpu().numpy() if args.task in isaac_gym_map.keys() else cost
             ep_len += 1
@@ -246,7 +246,7 @@ def main(args, cfg_env=None):
                     if done or time_out:
                         rew_deque.append(ep_ret[idx])
                         cost_deque.append(ep_cost[idx])
-                        success_deque.append(ep_success[idx])
+                        success_deque.append(int(ep_success[idx] > 0))
                         len_deque.append(ep_len[idx])
                         logger.store(
                             **{
