@@ -9,8 +9,7 @@ import multiprocessing
 # Uses saved configs to ease reproducibility
 
 # Define constants
-# SEEDS = ['0', '1', '2', '3', '4']
-SEEDS = ['1', '2', '3', '4']
+SEEDS = ['0', '1', '2', '3', '4']
 
 def run_script(algorithm, arguments):
     command = ['python', f'./Safe-Policy-Optimization/safepo/single_agent/{algorithm}.py'] + arguments

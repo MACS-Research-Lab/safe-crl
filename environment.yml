@@ -1,4 +1,0 @@
-name: safe_meta
-channels:
-  - defaults
-prefix: /home/austinc/.conda/envs/safe_meta
