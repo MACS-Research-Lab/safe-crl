@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-# Modified by Austin Coursey to include EWC
+# Modified to include EWC
 
 
 from __future__ import annotations
@@ -358,7 +358,7 @@ def main(args, cfg_env=None):
                 ewc_loss = 0.
 
                 for i, (fisher_info, old_params) in enumerate(zip(fisher_matrices, old_params_list)):
-                    if fisher_info is not None: # TODO: should we keep it from working on the current task too?
+                    if fisher_info is not None: 
                         for name, param in policy.actor.named_parameters():
                             fisher = fisher_info[name]
                             ewc_loss = ewc_loss + (fisher * (param - old_params[name]).pow(2)).sum() 

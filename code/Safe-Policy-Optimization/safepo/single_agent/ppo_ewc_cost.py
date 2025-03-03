@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-# Modified by Austin Coursey to include EWC and cost
+# Modified PPO to include EWC and cost
 
 
 from __future__ import annotations

@@ -40,8 +40,6 @@ class SafetyContinualWorldEnv(Env):
         self.steps_since_change += 1
         self.check_task()
 
-        # if not terminated:
-        #     terminated = int(info['success']) == 1
         return state, reward, cost, terminated, truncated, info
 
     def reset(self, seed=None, options=None):

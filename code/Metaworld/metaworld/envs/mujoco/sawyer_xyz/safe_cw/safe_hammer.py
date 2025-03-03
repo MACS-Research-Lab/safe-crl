@@ -224,8 +224,6 @@ class SafeSawyerHammerEnv(SawyerXYZEnv):
         mug_euler = rotation.quat2euler(mug_quat)
         tilt = np.sqrt(mug_euler[0]**2 + mug_euler[1]**2)
         self.mug_tilt = tilt
-        # if self.tipped_mug():
-        #     return 1000
         return np.floor(np.rad2deg(tilt)) 
 
     def tipped_mug(self):
@@ -233,6 +231,4 @@ class SafeSawyerHammerEnv(SawyerXYZEnv):
 
     def step(self, action):
         obs, rew, terminated, trunc, info = super().step(action)
-        # if self.tipped_mug():
-        #     terminated = True
         return obs, rew, terminated, trunc, info

@@ -16,20 +16,6 @@ from metaworld.types import InitConfigDict
 
 
 class SafeSawyerPushWallEnv(SawyerXYZEnv):
-    """SawyerPushEnvV2 updates SawyerReachPushPickPlaceWallEnv.
-
-    Env now handles only 'Push' task type from SawyerReachPushPickPlaceWallEnv.
-    Observations now include a vector pointing from the objectposition to the
-    goal position. Allows for scripted policy.
-
-    Changelog from V1 to V2:
-        - (7/7/20) Removed 3 element vector. Replaced with 3 element position
-            of the goal (for consistency with other environments)
-        - (6/15/20) Added a 3 element vector to the observation. This vector
-            points from the end effector to the goal coordinate.
-            i.e. (self._target_pos - pos_hand)
-        - (6/15/20) Separated reach-push-pick-place into 3 separate envs.
-    """
 
     OBJ_RADIUS: float = 0.02
 
