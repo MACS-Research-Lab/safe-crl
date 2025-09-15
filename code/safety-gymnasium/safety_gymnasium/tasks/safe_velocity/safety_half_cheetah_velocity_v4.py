@@ -115,6 +115,7 @@ class SafetyHalfCheetahVelocityEnv(HalfCheetahEnv):
             self.change_task()
 
     def change_task(self):
+
         task_name = TASK_CYCLE[self.current_task]
         self.current_task_name = task_name
 

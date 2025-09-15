@@ -10,6 +10,8 @@ import multiprocessing
 
 # Define constants
 SEEDS = ['0', '1', '2', '3', '4']
+# SEEDS = ['5', '6', '7', '8', '9']
+# SEEDS = ['6']
 
 def run_script(algorithm, arguments):
     command = ['python', f'./Safe-Policy-Optimization/safepo/single_agent/{algorithm}.py'] + arguments
@@ -17,7 +19,7 @@ def run_script(algorithm, arguments):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--alg', type=str, help="Choose from 'cpo', 'ppo_lag', 'cppo_pid', 'ppo_ewc', 'ppo_ewc_cost', 'clear")
+    parser.add_argument('--alg', type=str, help="Choose from 'ppo', 'cpo', 'ppo_lag', 'cppo_pid', 'ppo_ewc', 'ppo_ewc_cost', 'clear', 'ppo_ewc_cost_loss', 'sac'")
     parser.add_argument('--task', type=str, help="Choose from 'cheetah' or 'cw'")
     parser.add_argument('--name', type=str, help="Experiment name to prepend results file")
 
@@ -29,10 +31,14 @@ if __name__ == "__main__":
             env_name = 'SafetyHalfCheetahVelocity-v4'
             task_list = '[0, 1, 0, 2, 1, 0, 2]'
             total_steps = '8_000_000'
+        # elif args.task == 'cw':
+        #     env_name = 'SafetyContinualWorld'
+        #     task_list = '[0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4]'
+        #     total_steps = '15_000_000'
         elif args.task == 'cw':
             env_name = 'SafetyContinualWorld'
-            task_list = '[0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4]'
-            total_steps = '15_000_000'
+            task_list = '[0, 2, 0, 2]'
+            total_steps = '12_000_000'
         else:
             raise Exception("Choose a task in the allowed task list. Run --help to see the full list.")
 

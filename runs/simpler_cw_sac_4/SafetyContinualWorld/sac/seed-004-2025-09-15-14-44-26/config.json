@@ -1,0 +1,22 @@
+{
+    "cost_limit":	25.0,
+    "device":	"cpu",
+    "device_id":	0,
+    "ewc_lambda":	1,
+    "exp_name":	"SafetyContinualWorld-sac-seed-4",
+    "experiment":	"simpler_cw_sac_4",
+    "headless":	false,
+    "lagrangian_multiplier_init":	0.001,
+    "lagrangian_multiplier_lr":	0.035,
+    "log_dir":	"../runs/simpler_cw_sac_4/SafetyContinualWorld/sac/seed-004-2025-09-15-14-44-26",
+    "num_envs":	1,
+    "randomize":	false,
+    "seed":	4,
+    "steps_per_epoch":	20000,
+    "task":	"SafetyContinualWorld",
+    "task_length":	1000000,
+    "tasks":	"[0, 2, 0, 2]",
+    "total_steps":	12000000,
+    "use_eval":	false,
+    "write_terminal":	true
+}

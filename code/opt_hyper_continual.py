@@ -62,9 +62,6 @@ def evaluate_continual_alg(policy, task):
             rewards.append(reward)
             done = terminated or truncated
 
-            if 'success' in info and int(info['success'])==1 and not done:
-                done = True
-
         overall_rewards.append(np.sum(rewards))
 
     # Then, evaluate n times on task B (learning)
@@ -77,9 +74,6 @@ def evaluate_continual_alg(policy, task):
             obs, reward, cost, terminated, truncated, info = env2.step(action.detach().numpy())
             rewards.append(reward)
             done = terminated or truncated
-
-            if 'success' in info and int(info['success'])==1 and not done:
-                done = True
 
         overall_rewards.append(np.sum(rewards))
 

@@ -187,9 +187,6 @@ def train_cpo(hyperparams, task):
         gamma=config["gamma"],
     )
 
-    if task=='SafetyContinualWorld':
-        env.current_task = 2
-        env.change_task()
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
     ep_ret, ep_cost, ep_len, ep_success = (
@@ -530,9 +527,6 @@ def train_cppo(hyperparams, task):
         lagrangian_multiplier_init=0.001, # should this be a hyperparameter?
     )
 
-    if task=='SafetyContinualWorld':
-        env.current_task = 2
-        env.change_task()
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
     ep_ret, ep_cost, ep_len, ep_success = (
@@ -761,9 +755,6 @@ def train_ppo_lag(hyperparams, task):
         lagrangian_multiplier_lr=config['lagrangian_multiplier_lr'],
     )
 
-    if task=='SafetyContinualWorld':
-        env.current_task = 2
-        env.change_task()
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
     ep_ret, ep_cost, ep_len, ep_success = (
@@ -986,9 +977,6 @@ def train_ppo(hyperparams, task):
         gamma=config["gamma"],
     )
 
-    if task=='SafetyContinualWorld':
-        env.current_task = 2
-        env.change_task()
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
     ep_ret, ep_cost, ep_len, ep_success = (
@@ -1241,9 +1229,6 @@ def train_ppo_ewc(hyperparams, task):
         gamma=config["gamma"],
     )
 
-    if task=='SafetyContinualWorld':
-        env.current_task = 2
-        env.change_task()
     obs, _ = env.reset()
     obs = torch.as_tensor(obs, dtype=torch.float32, device=device)
     ep_ret, ep_cost, ep_len, ep_success = (

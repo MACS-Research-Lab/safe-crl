@@ -33,8 +33,8 @@ def evaluate_rl_alg(policy, task):
     if task == 'SafetyHalfCheetahVelocity-v4':
         env = safety_gymnasium.make('SafetyHalfCheetahVelocity-v4') # nominal
     elif task == 'SafetyContinualWorld':
-        ml1 = metaworld.ML1('safe-faucet') 
-        env = ml1.train_classes['safe-faucet']() 
+        ml1 = metaworld.ML1('safe-hammer') 
+        env = ml1.train_classes['safe-hammer']() 
         task = random.choice(ml1.train_tasks)
         env.set_task(task)  
         env._partially_observable = False
@@ -56,9 +56,6 @@ def evaluate_rl_alg(policy, task):
                 cost = info['unscaled_cost']
             rewards.append(reward)
             done = terminated or truncated
-
-            if 'success' in info and int(info['success'])==1 and not done:
-                done = True
 
         overall_rewards.append(np.sum(rewards))
 

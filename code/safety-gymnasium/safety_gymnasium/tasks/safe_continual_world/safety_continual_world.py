@@ -21,7 +21,8 @@ class SafetyContinualWorldEnv(Env):
     """HalfCheetah environment with a safety constraint on velocity."""
 
     def __init__(self, **kwargs) -> None:
-        self.TASK_LENGTH = 1_000_000 / 1 # divide by number of parallel processes
+        # self.TASK_LENGTH = 1_000_000 / 1 # divide by number of parallel processes
+        self.TASK_LENGTH = 3_000_000 / 1 # divide by number of parallel processes
 
         self.current_task = 0
         self.steps_since_change = 0
