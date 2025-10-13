@@ -56,7 +56,7 @@ from metaworld.envs.mujoco.sawyer_xyz.v2 import (
     SawyerWindowOpenEnvV2,
 )
 
-from metaworld.envs.mujoco.sawyer_xyz.safe_cw import SafeSawyerFaucetCloseEnv, SafeSawyerHammerEnv, SafeSawyerPushBackEnv, SafeSawyerPushWallEnv, SafeStickPullEnv
+from metaworld.envs.mujoco.sawyer_xyz.safe_cw import SafeSawyerFaucetCloseEnv, SafeSawyerHammerEnv, SafeSawyerPushBackEnv, SafeSawyerPushWallEnv, SafeStickPullEnv, SafeSawyerButtonPressEnv, SafeSawyerHandlePullSideEnv
 
 ALL_V2_ENVIRONMENTS = OrderedDict(
     (
@@ -117,7 +117,9 @@ ALL_V2_ENVIRONMENTS = OrderedDict(
         ("safe-hammer", SafeSawyerHammerEnv),
         ("safe-push-back", SafeSawyerPushBackEnv),
         ("safe-push-wall", SafeSawyerPushWallEnv),
-        ("safe-stick-pull", SafeStickPullEnv)
+        ("safe-stick-pull", SafeStickPullEnv),
+        ("safe-button-press", SafeSawyerButtonPressEnv),
+        ("safe-handle-pull-side", SafeSawyerHandlePullSideEnv)
     )
 )
 

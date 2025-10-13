@@ -5,16 +5,25 @@ import metaworld
 import numpy as np
 import random
 
-TASK_CYCLE = ['safe-hammer', 'safe-push-wall', 'safe-faucet', 'safe-push-back', 'safe-stick-pull', 
-              'safe-hammer', 'safe-push-wall', 'safe-faucet', 'safe-push-back', 'safe-stick-pull',
-              'safe-hammer', 'safe-push-wall', 'safe-faucet', 'safe-push-back', 'safe-stick-pull'] # recommend 15 million
+# TASK_CYCLE = ['safe-hammer', 'safe-push-wall', 'safe-faucet', 'safe-push-back', 'safe-stick-pull', 
+#               'safe-hammer', 'safe-push-wall', 'safe-faucet', 'safe-push-back', 'safe-stick-pull',
+#               'safe-hammer', 'safe-push-wall', 'safe-faucet', 'safe-push-back', 'safe-stick-pull'] # recommend 15 million
+
+# TASK_NUMS = {
+#     'hammer': 0,
+#     'push-wall': 1,
+#     'faucet': 2,
+#     'push-back': 3,
+#     'stick-pull': 4
+# }
+
+TASK_CYCLE = ['safe-faucet', 'button-press-v2', 'handle-pull-side-v2',
+              'safe-faucet', 'button-press-v2', 'handle-pull-side-v2'] # recommend 12 million
 
 TASK_NUMS = {
-    'hammer': 0,
-    'push-wall': 1,
-    'faucet': 2,
-    'push-back': 3,
-    'stick-pull': 4
+    'faucet-close-v2': 0,
+    'button-press-v2': 1,
+    'handle-pull-side-v2': 2,
 }
 
 class SafetyContinualWorldEnv(Env):
@@ -22,7 +31,7 @@ class SafetyContinualWorldEnv(Env):
 
     def __init__(self, **kwargs) -> None:
         # self.TASK_LENGTH = 1_000_000 / 1 # divide by number of parallel processes
-        self.TASK_LENGTH = 3_000_000 / 1 # divide by number of parallel processes
+        self.TASK_LENGTH = 2_000_000 / 1 # divide by number of parallel processes
 
         self.current_task = 0
         self.steps_since_change = 0

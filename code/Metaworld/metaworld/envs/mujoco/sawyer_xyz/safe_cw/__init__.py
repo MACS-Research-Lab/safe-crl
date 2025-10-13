@@ -17,3 +17,11 @@ from metaworld.envs.mujoco.sawyer_xyz.safe_cw.safe_push_wall import (
 from metaworld.envs.mujoco.sawyer_xyz.safe_cw.safe_stick_pull import (
     SafeStickPullEnv,
 )
+
+from metaworld.envs.mujoco.sawyer_xyz.safe_cw.safe_button_press import (
+    SafeSawyerButtonPressEnv,
+)
+
+from metaworld.envs.mujoco.sawyer_xyz.safe_cw.safe_handle_pull_side import (
+    SafeSawyerHandlePullSideEnv,
+)

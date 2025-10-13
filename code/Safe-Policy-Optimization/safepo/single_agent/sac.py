@@ -350,7 +350,7 @@ def main(args, cfg_env=None):
 
         # From ICLR paper hyperparameters
         steps_per_epoch = 500
-        num_epochs = 100
+        num_epochs = 500
         if len(memory) > config.batch_size and total_numsteps % steps_per_epoch == 0:
             for _ in range(num_epochs):
                 critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(
