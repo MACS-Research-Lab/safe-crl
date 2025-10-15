@@ -29,3 +29,7 @@ from metaworld.envs.mujoco.sawyer_xyz.safe_cw.safe_handle_pull_side import (
 from metaworld.envs.mujoco.sawyer_xyz.safe_cw.safe_slide_side import (
     SafeSawyerPlateSlideSideEnv,
 )
+
+from metaworld.envs.mujoco.sawyer_xyz.safe_cw.safe_drawer_close import (
+    SafeSawyerDrawerCloseEnv,
+)
