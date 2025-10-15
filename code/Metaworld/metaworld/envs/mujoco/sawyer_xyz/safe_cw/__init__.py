@@ -25,3 +25,7 @@ from metaworld.envs.mujoco.sawyer_xyz.safe_cw.safe_button_press import (
 from metaworld.envs.mujoco.sawyer_xyz.safe_cw.safe_handle_pull_side import (
     SafeSawyerHandlePullSideEnv,
 )
+
+from metaworld.envs.mujoco.sawyer_xyz.safe_cw.safe_slide_side import (
+    SafeSawyerPlateSlideSideEnv,
+)

@@ -17,13 +17,13 @@ import random
 #     'stick-pull': 4
 # }
 
-TASK_CYCLE = ['safe-faucet', 'button-press-v2', 'handle-pull-side-v2',
-              'safe-faucet', 'button-press-v2', 'handle-pull-side-v2'] # recommend 12 million
+TASK_CYCLE = ['safe-faucet', 'safe-button-press', 'safe-side-slide',
+              'safe-faucet', 'safe-button-press', 'safe-side-slide'] # recommend 12 million
 
 TASK_NUMS = {
-    'faucet-close-v2': 0,
-    'button-press-v2': 1,
-    'handle-pull-side-v2': 2,
+    'safe-faucet': 0,
+    'safe-button-press': 1,
+    'safe-side-slide': 2,
 }
 
 class SafetyContinualWorldEnv(Env):
