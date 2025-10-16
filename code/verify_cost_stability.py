@@ -20,7 +20,7 @@ def initialize_env(env_name):
     return env
 
 if __name__=="__main__":
-    env_names = ['safe-hammer', 'safe-push-wall', 'safe-faucet', 'safe-push-back', 'safe-stick-pull']
+    env_names = ['safe-drawer-close']
 
     num_repeat = 100
 

@@ -182,7 +182,7 @@ def main(args, cfg_env=None):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = True
-    torch.set_num_threads(4)
+    torch.set_num_threads(2)
     device = torch.device(f'{args.device}:{args.device_id}')
 
 

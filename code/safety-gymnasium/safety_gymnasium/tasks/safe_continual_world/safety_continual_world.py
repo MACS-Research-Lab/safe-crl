@@ -17,8 +17,8 @@ import random
 #     'stick-pull': 4
 # }
 
-TASK_CYCLE = ['safe-faucet', 'safe-button-press', 'safe-side-slide',
-              'safe-faucet', 'safe-button-press', 'safe-side-slide'] # recommend 12 million
+TASK_CYCLE = ['safe-faucet', 'safe-button-press', 'safe-drawer-close',
+              'safe-faucet', 'safe-button-press', 'safe-drawer-close'] # recommend 12 million
 
 TASK_NUMS = {
     'safe-faucet': 0,

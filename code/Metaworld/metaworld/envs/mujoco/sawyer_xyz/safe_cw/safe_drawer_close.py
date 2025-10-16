@@ -21,8 +21,8 @@ class SafeSawyerDrawerCloseEnv(SawyerXYZEnv):
         obj_low = (-0.1, 0.9, 0.0)
         obj_high = (0.1, 0.9, 0.0)
 
-        safe_low = (-0.15, 0.6, 0.01)
-        safe_high = (0.15, 0.65, 0.01)
+        safe_low = (-0.15, 0.52, 0.01)
+        safe_high = (0.15, 0.60, 0.01)
 
         super().__init__(
             self.model_name,

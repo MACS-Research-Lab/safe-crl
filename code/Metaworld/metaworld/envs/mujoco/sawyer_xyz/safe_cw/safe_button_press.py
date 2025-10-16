@@ -20,8 +20,8 @@ class SafeSawyerButtonPressEnv(SawyerXYZEnv):
         obj_high = (0.1, 0.9, 0.115)
 
         # Use this to configure the bounds of the mug
-        safe_low = (-0.15, 0.6, 0.01)
-        safe_high = (0.15, 0.65, 0.01)
+        safe_low = (-0.15, 0.55, 0.01)
+        safe_high = (0.15, 0.60, 0.01)
 
         super().__init__(
             self.model_name,
