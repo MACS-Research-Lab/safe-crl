@@ -20,7 +20,7 @@ def run_script(algorithm, arguments):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--alg', type=str, help="Choose from 'ppo', 'cpo', 'ppo_lag', 'cppo_pid', 'ppo_ewc', 'ppo_ewc_cost', 'clear', 'ppo_ewc_cost_loss', 'sac'")
-    parser.add_argument('--task', type=str, help="Choose from 'cheetah' or 'cw'")
+    parser.add_argument('--task', type=str, help="Choose from 'cheetah', 'cw', or 'ant'")
     parser.add_argument('--name', type=str, help="Experiment name to prepend results file")
 
     args = parser.parse_args()
@@ -31,14 +31,14 @@ if __name__ == "__main__":
             env_name = 'SafetyHalfCheetahVelocity-v4'
             task_list = '[0, 1, 0, 2, 1, 0, 2]'
             total_steps = '8_000_000'
-        # elif args.task == 'cw':
-        #     env_name = 'SafetyContinualWorld'
-        #     task_list = '[0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4]'
-        #     total_steps = '15_000_000'
         elif args.task == 'cw':
             env_name = 'SafetyContinualWorld'
             task_list = '[0, 2, 0, 2]'
             total_steps = '12_000_000'
+        elif args.task == 'ant':
+            env_name = 'SafetyAntVelocity-v2'
+            task_list = '[0, 1, 0, 2, 1, 0, 2]'
+            total_steps = '8_000_000'
         else:
             raise Exception("Choose a task in the allowed task list. Run --help to see the full list.")
 
