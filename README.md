@@ -30,6 +30,6 @@ Code for CoLLAs 2025 submission.
 
 ## Reproducing Results
 
-Run `python train_agent.py --alg {ppo, cpo, ppo_lag, cppo_pid, ppo_ewc, ppo_ewc_cost, clear} --env {cheetah or cw} --name {Experiment name}`. The results will be saved to `./runs` and the relevant CSV will be called `progress.csv`. However, since these results can take over a week total for all algorithms, depending on your computational resources, we recommend to use the saved results in the `./code/results/` folder instead. The notebook files in the `./code/` directory uses these for analysis. 
+Run `python train_agent.py --alg {ppo, cpo, ppo_lag, cppo_pid, ppo_ewc, ppo_ewc_cost, clear} --task {cheetah or cw} --name {Experiment name}`. The results will be saved to `./runs` and the relevant CSV will be called `progress.csv`. However, since these results can take over a week total for all algorithms, depending on your computational resources, we recommend to use the saved results in the `./code/results/` folder instead. The notebook files in the `./code/` directory uses these for analysis. 
 
 To repeat or extend the hyperparameter experiments, run the relevant hyperparameter optimization scripts. Use the `--help` flag to get the arguments for those files. The hyperparameters will be saved in `./code/hyperparams/`. 
