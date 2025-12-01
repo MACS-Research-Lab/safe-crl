@@ -943,7 +943,7 @@ def train_ppo(hyperparams, task):
 
     # set training steps
     steps_per_epoch = 20_000
-    total_steps = 500_000
+    total_steps = 1_000_000
     local_steps_per_epoch = steps_per_epoch 
     epochs = total_steps // steps_per_epoch
     # create the actor-critic module
