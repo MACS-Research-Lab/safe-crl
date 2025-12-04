@@ -75,7 +75,6 @@ def get_hyperparameters(config, task):
     else:
         return config
     
-    env_name = 'cheetah'
     db_path = os.path.abspath(f"./hyperparams/ppo_ewc_cheetah.db")
     study = optuna.load_study(study_name=f'ppo_ewc_cheetah', storage=f'sqlite:///{db_path}')
     hyperparams = study.best_params
