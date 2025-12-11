@@ -270,6 +270,13 @@ __register_helper(
 )
 
 __register_helper(
+    env_id='SafetyAntVelocity-v3',
+    entry_point='safety_gymnasium.tasks.safe_velocity.safety_ant_velocity_v3:SafetyAntVelocityEnv',
+    max_episode_steps=1000,
+    reward_threshold=6000.0,
+)
+
+__register_helper(
     env_id='SafetyHumanoidVelocity-v0',
     entry_point='safety_gymnasium.tasks.safe_velocity.safety_humanoid_velocity_v0:SafetyHumanoidVelocityEnv',
     max_episode_steps=1000,

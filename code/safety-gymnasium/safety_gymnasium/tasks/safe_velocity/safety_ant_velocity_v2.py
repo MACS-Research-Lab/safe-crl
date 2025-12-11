@@ -25,7 +25,7 @@ import numpy as np
 import mujoco
 
 TASK_CYCLE = ['nominal', 'back', 'nominal', 'front', 'back', 'nominal', 'front'] # recommend 8 million
-TASK_LENGTH = 1_000_000 / 10 # divide by number of parallel processes
+TASK_LENGTH = 1_000_000 #/ 10 # divide by number of parallel processes
 # TASK_LENGTH = 250 / 10 # divide by number of parallel processes
 TASK_NUMS = {
     'nominal': 0,

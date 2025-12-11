@@ -34,6 +34,9 @@ def evaluate_continual_alg(policy, task):
     if task == 'SafetyHalfCheetahVelocity-v4':
         env1 = safety_gymnasium.make('SafetyHalfCheetahVelocity-v4') # nominal
         env2 = safety_gymnasium.make('SafetyHalfCheetahVelocity-v5') # back leg missing
+    elif task == 'SafetyAntVelocity-v2':
+        env1 = safety_gymnasium.make('SafetyAntVelocity-v2') # nominal
+        env2 = safety_gymnasium.make('SafetyAntVelocity-v3') # back legs missing
     elif task == 'SafetyContinualWorld':
         ml1 = metaworld.ML1('safe-hammer') 
         env1 = ml1.train_classes['safe-hammer']() 
@@ -83,15 +86,17 @@ def evaluate_continual_alg(policy, task):
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--alg', type=str, help="Choose from 'ppo_ewc'")
-    parser.add_argument('--task', type=str, help="Choose from 'cheetah' or 'cw'")
+    parser.add_argument('--task', type=str, help="Choose from 'cheetah', 'cw', or 'ant'")
     args = parser.parse_args()
 
     if args.task == 'cheetah':
         task = 'SafetyHalfCheetahVelocity-v4'
     elif args.task == 'cw':
         task = 'SafetyContinualWorld'
+    elif args.task == 'ant':
+        task = 'SafetyAntVelocity-v2'
     else:
-        raise Exception(f'{args.task} not supported, should be one of cheetah, cw')
+        raise Exception(f'{args.task} not supported, should be one of cheetah, cw, or ant')
 
     storage_url = f"sqlite:///hyperparams/{args.alg}_{args.task}.db"
 
