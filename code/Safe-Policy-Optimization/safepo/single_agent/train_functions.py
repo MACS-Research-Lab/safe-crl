@@ -1175,6 +1175,8 @@ def train_ppo_ewc(hyperparams, task):
         tasks = [0, 1]
     elif task == 'SafetyContinualWorld':
         tasks = [0, 1]
+    elif task == 'SafetyAntVelocity-v2':
+        tasks = [0, 1]
 
     num_tasks = len(tasks)
     # EWC over multiple tasks
@@ -1188,15 +1190,15 @@ def train_ppo_ewc(hyperparams, task):
     env, obs_space, act_space = make_sa_mujoco_env(
         num_envs=1, env_id=task, seed=args['seed']
     )
-    env.TASK_LENGTH = 500_000
+    env.TASK_LENGTH = 1_000_000
     config = hyperparams
 
     # set training steps
     steps_per_epoch = 20_000
-    total_steps = 1_000_000
+    total_steps = 2_000_000
     local_steps_per_epoch = steps_per_epoch 
     epochs = total_steps // steps_per_epoch
-    steps_per_task = 500_000
+    steps_per_task = 1_000_000
 
     # create the actor-critic module
     policy = ActorVCritic(

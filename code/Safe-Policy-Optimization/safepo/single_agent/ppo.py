@@ -73,8 +73,8 @@ def get_hyperparameters(config, task):
         env_name = 'cw'
     elif task == 'SafetyAntVelocity-v2':
         # env_name = 'ant'
-        # env_name = 'ant'
-        return default_cfg # TODO: testing the default hyperparameters
+        env_name = 'ant'
+        # return default_cfg # TODO: testing the default hyperparameters
     else:
         return config
     

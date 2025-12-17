@@ -1,0 +1,31 @@
+{
+    "batch_size":	128,
+    "cost_limit":	25.0,
+    "device":	"cpu",
+    "device_id":	0,
+    "ewc_lambda":	1,
+    "exp_name":	"SafetyAntVelocity-v2-cpo-seed-0",
+    "experiment":	"new_hpo_ant_cpo_0",
+    "gamma":	0.99,
+    "headless":	false,
+    "hidden_sizes":	[
+        64,
+        64
+    ],
+    "lagrangian_multiplier_init":	0.001,
+    "lagrangian_multiplier_lr":	0.035,
+    "learning_iters":	10,
+    "log_dir":	"../runs/new_hpo_ant_cpo_0/SafetyAntVelocity-v2/cpo/seed-000-2025-12-12-14-40-53",
+    "max_grad_norm":	40.0,
+    "num_envs":	1,
+    "randomize":	false,
+    "seed":	0,
+    "steps_per_epoch":	20000,
+    "target_kl":	0.01,
+    "task":	"SafetyAntVelocity-v2",
+    "task_length":	1000000,
+    "tasks":	"[0, 1, 0, 2, 1, 0, 2]",
+    "total_steps":	8000000,
+    "use_eval":	false,
+    "write_terminal":	true
+}

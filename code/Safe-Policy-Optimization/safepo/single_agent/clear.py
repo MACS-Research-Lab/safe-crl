@@ -105,10 +105,12 @@ isaac_gym_specific_cfg = {
 }
 
 def get_hyperparameters(config, task):
-    if task == 'SafetyHalfCheetahVelocity-v4' or task == 'SafetyAnyVelocity-v2':
+    if task == 'SafetyHalfCheetahVelocity-v4':
         env_name = 'cheetah'
     elif task == 'SafetyContinualWorld':
         env_name = 'cw'
+    elif task == 'SafetyAntVelocity-v2':
+        env_name = 'ant'
     else:
         return config
     
@@ -303,18 +305,18 @@ def main(args, cfg_env=None):
                     for i in range(recent_data_idx[0], recent_data_idx[1]):
                         replay_buffer.add(
                             {
-                                'obs': tmp_data['obs'][i],
-                                'act': tmp_data['act'][i],
-                                'reward': tmp_data['reward'][i],
-                                'cost': tmp_data['cost'][i],
-                                'value_r': tmp_data['value_r'][i],
-                                'value_c': tmp_data['value_c'][i],
-                                'log_prob': tmp_data['log_prob'][i],
-                                'target_value_r': tmp_data['target_value_r'][i],
-                                'target_value_c': tmp_data['target_value_c'][i],
-                                'adv_r': tmp_data['adv_r'][i]
+                                'obs': tmp_data['obs'][i].detach().cpu(),
+                                'act': tmp_data['act'][i].detach().cpu(),
+                                'reward': tmp_data['reward'][i].detach().cpu(),
+                                'cost': tmp_data['cost'][i].detach().cpu(),
+                                'value_r': tmp_data['value_r'][i].detach().cpu(),
+                                'value_c': tmp_data['value_c'][i].detach().cpu(),
+                                'log_prob': tmp_data['log_prob'][i].detach().cpu(),
+                                'target_value_r': tmp_data['target_value_r'][i].detach().cpu(),
+                                'target_value_c': tmp_data['target_value_c'][i].detach().cpu(),
+                                'adv_r': tmp_data['adv_r'][i].detach().cpu(),
                             }
-                    )
+                        )
 
         rollout_end_time = time.time()
 
@@ -362,7 +364,11 @@ def main(args, cfg_env=None):
         # compute advantage
         advantage = data["adv_r"]
 
-        replayed_data = replay_buffer.sample_tensors(local_steps_per_epoch)
+        batch = min(local_steps_per_epoch, len(replay_buffer.buffer))
+        replayed_data = replay_buffer.sample_tensors(batch)
+
+        for k in replayed_data:
+            replayed_data[k] = replayed_data[k].to(device)
 
         dataloader = DataLoader(
             dataset=TensorDataset(
