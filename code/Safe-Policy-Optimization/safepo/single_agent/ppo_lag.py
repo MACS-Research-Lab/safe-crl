@@ -66,10 +66,12 @@ isaac_gym_specific_cfg = {
 }
 
 def get_hyperparameters(config, task):
-    if task == 'SafetyHalfCheetahVelocity-v4' or task == 'SafetyAnyVelocity-v2':
+    if task == 'SafetyHalfCheetahVelocity-v4':
         env_name = 'cheetah'
     elif task == 'SafetyContinualWorld':
         env_name = 'cw'
+    elif task == 'SafetyAntVelocity-v2':
+        env_name = 'ant'
     else:
         return config
     

@@ -38,15 +38,15 @@ def evaluate_continual_alg(policy, task):
         env1 = safety_gymnasium.make('SafetyAntVelocity-v2') # nominal
         env2 = safety_gymnasium.make('SafetyAntVelocity-v3') # back legs missing
     elif task == 'SafetyContinualWorld':
-        ml1 = metaworld.ML1('safe-hammer') 
-        env1 = ml1.train_classes['safe-hammer']() 
+        ml1 = metaworld.ML1('safe-faucet') 
+        env1 = ml1.train_classes['safe-faucet']() 
         task = random.choice(ml1.train_tasks)
         env1.set_task(task)  
         env1._partially_observable = False
         env1._freeze_rand_vec = False
 
-        ml1 = metaworld.ML1('safe-push-wall') 
-        env2 = ml1.train_classes['safe-push-wall']() 
+        ml1 = metaworld.ML1('safe-drawer-close') 
+        env2 = ml1.train_classes['safe-drawer-close']() 
         task = random.choice(ml1.train_tasks)
         env2.set_task(task)  
         env2._partially_observable = False
@@ -61,7 +61,11 @@ def evaluate_continual_alg(policy, task):
         rewards, costs = [], []
         while not done:
             action, _, _, _ = policy.step(torch.tensor(obs, dtype=torch.float32), deterministic=True)
-            obs, reward, cost, terminated, truncated, info = env1.step(action.detach().numpy())
+            if task == 'SafetyContinualWorld':
+                obs, reward, terminated, truncated, info = env1.step(action.detach().numpy())
+                cost = info['unscaled_cost']
+            else:
+                obs, reward, cost, terminated, truncated, info = env1.step(action.detach().numpy())
             rewards.append(reward)
             done = terminated or truncated
 
@@ -74,7 +78,11 @@ def evaluate_continual_alg(policy, task):
         rewards, costs = [], []
         while not done:
             action, _, _, _ = policy.step(torch.tensor(obs, dtype=torch.float32), deterministic=True)
-            obs, reward, cost, terminated, truncated, info = env2.step(action.detach().numpy())
+            if task == 'SafetyContinualWorld':
+                obs, reward, terminated, truncated, info = env2.step(action.detach().numpy())
+                cost = info['unscaled_cost']
+            else:
+                obs, reward, cost, terminated, truncated, info = env2.step(action.detach().numpy())
             rewards.append(reward)
             done = terminated or truncated
 

@@ -66,14 +66,15 @@ isaac_gym_specific_cfg = {
 }
 
 def get_hyperparameters(config, task):
-    if task == 'SafetyHalfCheetahVelocity-v4' or task == 'SafetyAnyVelocity-v2':
+    if task == 'SafetyHalfCheetahVelocity-v4':
         env_name = 'cheetah'
     elif task == 'SafetyContinualWorld':
         env_name = 'cw'
+    elif task == 'SafetyAntVelocity-v2':
+        env_name = 'ant'
     else:
         return config
     
-    env_name = 'cheetah'
     db_path = os.path.abspath(f"./hyperparams/cppo_pid_{env_name}.db")
     study = optuna.load_study(study_name=f'cppo_pid_{env_name}', storage=f'sqlite:///{db_path}')
     hyperparams = study.best_params

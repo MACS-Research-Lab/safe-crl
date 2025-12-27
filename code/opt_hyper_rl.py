@@ -35,8 +35,8 @@ def evaluate_rl_alg(policy, task):
     elif task == 'SafetyAntVelocity-v2':
         env = safety_gymnasium.make('SafetyAntVelocity-v2') # nominal
     elif task == 'SafetyContinualWorld':
-        ml1 = metaworld.ML1('safe-hammer') 
-        env = ml1.train_classes['safe-hammer']() 
+        ml1 = metaworld.ML1('safe-faucet') 
+        env = ml1.train_classes['safe-faucet']() 
         task = random.choice(ml1.train_tasks)
         env.set_task(task)  
         env._partially_observable = False
