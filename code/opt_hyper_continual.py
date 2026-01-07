@@ -30,14 +30,14 @@ def objective(trial, alg, task):
     value = evaluate_continual_alg(policy, task)
     return value
 
-def evaluate_continual_alg(policy, task):
-    if task == 'SafetyHalfCheetahVelocity-v4':
+def evaluate_continual_alg(policy, task_name):
+    if task_name == 'SafetyHalfCheetahVelocity-v4':
         env1 = safety_gymnasium.make('SafetyHalfCheetahVelocity-v4') # nominal
         env2 = safety_gymnasium.make('SafetyHalfCheetahVelocity-v5') # back leg missing
-    elif task == 'SafetyAntVelocity-v2':
+    elif task_name == 'SafetyAntVelocity-v2':
         env1 = safety_gymnasium.make('SafetyAntVelocity-v2') # nominal
         env2 = safety_gymnasium.make('SafetyAntVelocity-v3') # back legs missing
-    elif task == 'SafetyContinualWorld':
+    elif task_name == 'SafetyContinualWorld':
         ml1 = metaworld.ML1('safe-faucet') 
         env1 = ml1.train_classes['safe-faucet']() 
         task = random.choice(ml1.train_tasks)
@@ -61,7 +61,7 @@ def evaluate_continual_alg(policy, task):
         rewards, costs = [], []
         while not done:
             action, _, _, _ = policy.step(torch.tensor(obs, dtype=torch.float32), deterministic=True)
-            if task == 'SafetyContinualWorld':
+            if task_name == 'SafetyContinualWorld':
                 obs, reward, terminated, truncated, info = env1.step(action.detach().numpy())
                 cost = info['unscaled_cost']
             else:
@@ -78,7 +78,7 @@ def evaluate_continual_alg(policy, task):
         rewards, costs = [], []
         while not done:
             action, _, _, _ = policy.step(torch.tensor(obs, dtype=torch.float32), deterministic=True)
-            if task == 'SafetyContinualWorld':
+            if task_name == 'SafetyContinualWorld':
                 obs, reward, terminated, truncated, info = env2.step(action.detach().numpy())
                 cost = info['unscaled_cost']
             else:
