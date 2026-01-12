@@ -463,7 +463,8 @@ def compute_fisher_info(data, policy):
         log_prob.backward()
         for name, param in policy.actor.named_parameters():
             # approximation of fisher information
-            grad_sq = param.grad.detach().pow(2)
+            # grad_sq = param.grad.detach().pow(2)
+            grad_sq = param.grad.pow(2)
 
             # cost weighting
             weighted_grad_sq = (1 / (1 + cost)) * grad_sq
