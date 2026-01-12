@@ -1,0 +1,32 @@
+{
+    "batch_size":	64,
+    "cost_limit":	25.0,
+    "device":	"cpu",
+    "device_id":	0,
+    "ewc_lambda":	1,
+    "exp_name":	"SafetyContinualWorld-ppo_safer_ewc-seed-1",
+    "experiment":	"safer_ewc_cw_1",
+    "gamma":	0.99,
+    "headless":	false,
+    "hidden_sizes":	[
+        128,
+        128
+    ],
+    "lagrangian_multiplier_init":	0.001,
+    "lagrangian_multiplier_lr":	0.035,
+    "lambda":	23.124955305973362,
+    "learning_iters":	37,
+    "log_dir":	"../runs/safer_ewc_cw_1/SafetyContinualWorld/ppo_safer_ewc/seed-001-2026-01-09-11-35-43",
+    "max_grad_norm":	40.0,
+    "num_envs":	1,
+    "randomize":	false,
+    "seed":	1,
+    "steps_per_epoch":	20000,
+    "target_kl":	0.02,
+    "task":	"SafetyContinualWorld",
+    "task_length":	1000000,
+    "tasks":	"[0, 2, 0, 2]",
+    "total_steps":	12000000,
+    "use_eval":	false,
+    "write_terminal":	true
+}
