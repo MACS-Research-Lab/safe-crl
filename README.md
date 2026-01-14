@@ -1,6 +1,6 @@
 # Safe Continual Reinforcement Learning
 
-Code for CoLLAs 2025 submission.
+Code for EJC 2026 submission.
 
 ## Repository Structure
 
@@ -12,6 +12,7 @@ Code for CoLLAs 2025 submission.
 - [./code/safety-gymnasium/](./code/safety-gymnasium/) is a safe RL gymnasium library from [this repo](https://github.com/PKU-Alignment/safety-gymnasium)
 - [./code/safety-gymnasium/safety-gymnasium/tasks/](./code/safety-gymnasium/safety_gymnasium/tasks) contains the [Safe Continual World](./code/safety-gymnasium/safety_gymnasium/tasks/safe_continual_world/safety_continual_world.py) and [Damaged HalfCheetah Velocity](./code/safety-gymnasium/safety_gymnasium/tasks/safe_velocity/safety_half_cheetah_velocity_v4.py) environments, used by the algorithms above
 - [./code/Analyze Results.ipynb](./code/Analyze%20Results.ipynb) contains analysis code for the Damaged HalfCheetah Velocity task. All results from this paper can be produced in this notebook
+- [./code/Analyze Results Ant.ipynb](./code/Analyze%20Results%20Ant.ipynb) contains analysis code for the Damaged HalfCheetah Velocity task. All results from this paper can be produced in this notebook
 - [./code/Analyze Results CW.ipynb](./code/Analyze%20Results%20CW.ipynb) contains analysis code for the Safe Continual World task. All results from this paper can be produced in this notebook
 - [./code/opt_hyper_continual.py](./code/opt_hyper_continual.py) code to optimize hyperparameters for continual RL algorithms
 - [./code/opt_hyper_rl.py](./code/opt_hyper_rl.py) code to optimize hyperparameters for regular RL algorithms
@@ -30,6 +31,6 @@ Code for CoLLAs 2025 submission.
 
 ## Reproducing Results
 
-Run `python train_agent.py --alg {ppo, cpo, ppo_lag, cppo_pid, ppo_ewc, ppo_ewc_cost, clear} --task {cheetah or cw} --name {Experiment name}`. The results will be saved to `./runs` and the relevant CSV will be called `progress.csv`. However, since these results can take over a week total for all algorithms, depending on your computational resources, we recommend to use the saved results in the `./code/results/` folder instead. The notebook files in the `./code/` directory uses these for analysis. 
+Run `python train_agent.py --alg {ppo, cpo, ppo_lag, cppo_pid, ppo_ewc, ppo_ewc_cost, clear, safer_ewc} --task {cheetah or cw} --name {Experiment name}`. The results will be saved to `./runs` and the relevant CSV will be called `progress.csv`. However, since these results can take over a week total for all algorithms, depending on your computational resources, we recommend to use the saved results in the `./code/results/` folder instead. The notebook files in the `./code/` directory uses these for analysis. 
 
 To repeat or extend the hyperparameter experiments, run the relevant hyperparameter optimization scripts. Use the `--help` flag to get the arguments for those files. The hyperparameters will be saved in `./code/hyperparams/`. 
